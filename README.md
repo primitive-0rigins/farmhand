@@ -1,10 +1,32 @@
 # Farmhand
 
+[![CI](https://github.com/primitive-0rigins/farmhand/actions/workflows/ci.yml/badge.svg)](https://github.com/primitive-0rigins/farmhand/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+
 Farmhand is a daily farm operating calendar.
 
 It tells a farmer what to do today, what to watch for, and what changed because
 of weather, season, zone, crops, pests, disease pressure, and the farm's own
 equipment and playbooks.
+
+![Farmhand portfolio card](docs/portfolio-card.svg)
+
+## Why This Matters
+
+Farmhand shows product and domain modeling: deterministic planning rules first, AI later.
+The useful part is not that it is farm-specific; it is that real operating constraints shape
+the data model, task reasons, and reusable playbook workflow.
+
+## Quick Demo
+
+```bash
+git clone https://github.com/primitive-0rigins/farmhand.git
+cd farmhand/backend
+python -m pip install fastapi "uvicorn[standard]" pydantic sqlalchemy "psycopg[binary]" pytest
+python -m pytest
+```
 
 ## Product Promise
 
