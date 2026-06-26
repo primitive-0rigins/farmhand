@@ -1,0 +1,65 @@
+# Farmhand
+
+Farmhand is a daily farm operating calendar.
+
+It tells a farmer what to do today, what to watch for, and what changed because
+of weather, season, zone, crops, pests, disease pressure, and the farm's own
+equipment and playbooks.
+
+## Product Promise
+
+Farmhand is not a generic calendar. It is a farm-aware task system.
+
+Example:
+
+- A user creates a farm in Greenville, SC, zone 8b.
+- They add a greenhouse, tomatoes, peppers, irrigation, and a tractor.
+- Tomorrow has a thunderstorm risk.
+- Farmhand creates a task: "Secure greenhouse before storms."
+- The farmer edits it to: "Secure greenhouse, latch sidewalls, cover tractor,
+  and move seed trays off low benches."
+- That edited playbook becomes their default bad-weather prep task going
+  forward.
+
+## Stack
+
+- Backend: Python, FastAPI
+- Database: Postgres
+- Frontend: React, TypeScript, Vite
+- Job runner, later: Arq, Celery, or RQ
+- Weather source, first: NOAA/NWS where available
+
+## Repository Layout
+
+```text
+farmhand/
+  backend/
+    app/
+      domain/        # deterministic farm rules and planning logic
+    tests/
+  frontend/
+    src/
+  docs/
+    ROADMAP.md
+  docker-compose.yml
+```
+
+## First Principles
+
+- Farmers should see what matters in under 20 seconds.
+- Every generated task needs a plain-English reason.
+- Generated tasks are editable into reusable farm playbooks.
+- Rules are deterministic first. AI can come later as an assistant layer.
+- Location, planting zone, farm assets, and crops drive the calendar.
+
+## Local Development
+
+Backend tests currently exercise pure domain logic and do not require Postgres.
+
+```bash
+cd backend
+python3 -m pytest
+```
+
+Frontend install/build is intentionally not bootstrapped in this first commit.
+Use `npm install` from `frontend/` when ready to run the UI locally.

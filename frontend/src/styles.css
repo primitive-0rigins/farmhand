@@ -1,0 +1,196 @@
+:root {
+  color: #1d2520;
+  background: #f4f1e8;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #26352b;
+  color: #f8f5ec;
+  padding: 24px;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 36px;
+}
+
+.brand strong,
+.brand span {
+  display: block;
+}
+
+.brand span {
+  color: #c8d1c6;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+nav {
+  display: grid;
+  gap: 8px;
+}
+
+nav button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #eef4eb;
+  cursor: pointer;
+  padding: 11px 12px;
+  text-align: left;
+}
+
+nav button.active,
+nav button:hover {
+  background: #3c5142;
+}
+
+.workspace {
+  padding: 28px;
+}
+
+.topbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.topbar p {
+  color: #647067;
+  margin: 0 0 4px;
+}
+
+.topbar h1 {
+  font-size: 32px;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.primary-action,
+.actions button {
+  background: #2f6b45;
+  border: 0;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  padding: 10px 14px;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.panel {
+  background: white;
+  border: 1px solid #ddd8ca;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.panel svg {
+  color: #2f6b45;
+}
+
+.panel span {
+  color: #647067;
+  font-size: 14px;
+}
+
+.panel strong {
+  font-size: 20px;
+}
+
+.panel.urgent {
+  border-color: #bd7b32;
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task {
+  align-items: center;
+  background: white;
+  border: 1px solid #ddd8ca;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  padding: 18px;
+}
+
+.task h2 {
+  font-size: 18px;
+  margin: 8px 0 6px;
+}
+
+.task p {
+  color: #5f6b63;
+  margin: 0;
+}
+
+.badge {
+  background: #e9efe6;
+  border-radius: 999px;
+  color: #2f6b45;
+  font-size: 13px;
+  padding: 4px 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  background: #eef2ec;
+  color: #26352b;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    padding: 16px;
+  }
+
+  nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .task {
+    align-items: flex-start;
+    gap: 14px;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,1 @@
+"""Farmhand deterministic domain rules."""
