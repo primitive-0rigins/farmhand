@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Farmhand portfolio card</title>
+  <desc id="desc">Farm-aware operating calendar with deterministic planning rules and reusable playbooks.</desc>
+  <rect width="1200" height="420" fill="#1f2937"/>
+  <rect x="48" y="48" width="1104" height="324" rx="18" fill="#f8fafc"/>
+  <text x="92" y="125" fill="#111827" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="58" font-weight="700">Farmhand</text>
+  <text x="92" y="178" fill="#374151" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="27">Domain-aware operating calendar for growers</text>
+  <g transform="translate(775 118)" fill="none" stroke="#166534" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="10" y="22" width="210" height="150" rx="18"/>
+    <path d="M50 22V0M180 22V0M10 70h210M62 112h42M132 112h42M62 148h42"/>
+    <path d="M262 150c44-26 70-65 78-118 35 40 45 82 29 126-20 56-82 79-132 55 7-24 15-44 25-63Z" stroke="#15803d"/>
+  </g>
+  <text x="92" y="260" fill="#111827" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="25">Rules engine • plain-English task reasons • editable farm playbooks</text>
+  <text x="92" y="316" fill="#4b5563" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22">MIT licensed · CI tested · Python/FastAPI + React/TypeScript</text>
+</svg>
