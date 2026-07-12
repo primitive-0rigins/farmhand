@@ -1,14 +1,30 @@
+from contextlib import asynccontextmanager
 from datetime import date
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
-from app.config import get_allowed_origins
+from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
+from app.config import dev_auth_enabled, get_allowed_origins
+from app.db import get_session, init_db
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
+from app.email import ConsoleEmailSender, EmailSender
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
-from app.schemas import TodayResponse
+from app.orm import User
+from app.schemas import (
+    MagicLinkRequest,
+    MagicLinkResponse,
+    SessionResponse,
+    TodayResponse,
+    UserResponse,
+    VerifyRequest,
+)
 from app.weather import DemoWeatherProvider, WeatherProvider
+
+# Swap ConsoleEmailSender() for a real SMTP/transactional sender in production.
+email_sender: EmailSender = ConsoleEmailSender()
 
 # Greenville, SC demo coordinates, used as a fallback if geocoding is skipped.
 DEMO_LATITUDE = 34.85
@@ -23,14 +39,70 @@ geocoder: Geocoder = StaticGeocoder(
 )
 weather_provider: WeatherProvider = DemoWeatherProvider()
 
-app = FastAPI(title="Farmhand")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Farmhand", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
     allow_credentials=False,
-    allow_methods=["GET"],
-    allow_headers=["Content-Type"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+def current_user(
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+) -> User:
+    try:
+        return resolve_user(session, authorization)
+    except AuthError as error:
+        raise HTTPException(status_code=401, detail=str(error))
+
+
+@app.post("/auth/request", response_model=MagicLinkResponse, status_code=202)
+def auth_request(
+    body: MagicLinkRequest, session: Session = Depends(get_session)
+) -> MagicLinkResponse:
+    try:
+        token = request_magic_link(session, body.email, email_sender)
+    except AuthError as error:
+        raise HTTPException(status_code=400, detail=str(error))
+    # The token is emailed (logged in dev). It is only echoed here when the
+    # dev flag is set, so the flow can be exercised without a mail server.
+    return MagicLinkResponse(
+        status="sent",
+        dev_login_token=token if dev_auth_enabled() else None,
+    )
+
+
+@app.post("/auth/verify", response_model=SessionResponse)
+def auth_verify(
+    body: VerifyRequest, session: Session = Depends(get_session)
+) -> SessionResponse:
+    try:
+        token = verify_magic_link(session, body.token)
+    except AuthError as error:
+        raise HTTPException(status_code=401, detail=str(error))
+    return SessionResponse(session_token=token)
+
+
+@app.post("/auth/logout", status_code=204)
+def auth_logout(
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+) -> None:
+    logout(session, authorization)
+
+
+@app.get("/auth/me", response_model=UserResponse)
+def auth_me(user: User = Depends(current_user)) -> UserResponse:
+    return UserResponse(id=user.id, email=user.email)
 
 
 @app.get("/health")

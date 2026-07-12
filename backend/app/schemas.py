@@ -42,3 +42,43 @@ class TodayResponse(BaseModel):
     forecast: ForecastSummary
     tasks: list[TodayTask]
     week: list[WeekDayPlan]
+
+
+class MagicLinkRequest(BaseModel):
+    email: str
+
+
+class MagicLinkResponse(BaseModel):
+    status: str
+    dev_login_token: str | None = None
+
+
+class VerifyRequest(BaseModel):
+    token: str
+
+
+class SessionResponse(BaseModel):
+    session_token: str
+    token_type: str = "bearer"
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: str
+
+
+class FarmCreate(BaseModel):
+    name: str
+    city: str
+    state: str
+    planting_zone: str
+    crops: list[str] = []
+
+
+class FarmResponse(BaseModel):
+    id: int
+    name: str
+    city: str
+    state: str
+    planting_zone: str
+    crops: list[str]
