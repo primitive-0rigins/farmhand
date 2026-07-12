@@ -301,7 +301,12 @@ function App() {
               <div className="panel">
                 <AlertTriangle />
                 <span>Watch for</span>
-                <strong>{activeTasks.some((task) => task.severity === "watch") ? "Pest pressure" : "None"}</strong>
+                <strong>
+                  {(() => {
+                    const watchCount = activeTasks.filter((task) => task.severity === "watch").length;
+                    return watchCount > 0 ? `${watchCount} to watch` : "None";
+                  })()}
+                </strong>
               </div>
               <div className="panel">
                 <CalendarDays />
