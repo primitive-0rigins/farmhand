@@ -208,6 +208,12 @@ function App() {
     setShowManualForm(false);
   }
 
+  function cancelManualTask() {
+    setManualTitle("");
+    setManualReason("");
+    setShowManualForm(false);
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -224,10 +230,10 @@ function App() {
         </div>
         <nav>
           <button className="active">Today</button>
-          <button>Calendar</button>
-          <button>Crops</button>
-          <button>Playbooks</button>
-          <button>Signals</button>
+          <button disabled>Calendar</button>
+          <button disabled>Crops</button>
+          <button disabled>Playbooks</button>
+          <button disabled>Signals</button>
         </nav>
       </aside>
 
@@ -273,7 +279,7 @@ function App() {
                     <CheckCircle2 size={16} />
                     Save task
                   </button>
-                  <button onClick={() => setShowManualForm(false)}>
+                  <button onClick={cancelManualTask}>
                     <RotateCcw size={16} />
                     Cancel
                   </button>

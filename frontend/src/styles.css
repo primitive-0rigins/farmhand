@@ -67,6 +67,16 @@ nav button:hover {
   background: #3c5142;
 }
 
+nav button:disabled {
+  color: #9aaa9e;
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+nav button:disabled:hover {
+  background: transparent;
+}
+
 .workspace {
   padding: 28px;
 }
