@@ -106,3 +106,32 @@ def test_heat_irrigation_rule_does_not_fire_without_irrigation() -> None:
     tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 1))
 
     assert not any(task.source_rule == "heat_irrigation_playbook" for task in tasks)
+
+
+def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+        assets=[
+            FarmAsset(name="Main greenhouse", kind="greenhouse"),
+            FarmAsset(name="Drip irrigation", kind="irrigation"),
+        ],
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 6, 27),
+        thunderstorm_risk=True,
+        heat_index_f=94,
+    )
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 6, 26))
+
+    assert [task.severity for task in tasks] == [
+        TaskSeverity.URGENT,
+        TaskSeverity.WATCH,
+        TaskSeverity.WATCH,
+        TaskSeverity.INFO,
+    ]
+    assert tasks[0].source_rule == "bad_weather_playbook"

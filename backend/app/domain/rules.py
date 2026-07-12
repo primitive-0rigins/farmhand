@@ -49,6 +49,17 @@ ZONE_8B_SEASONAL_TASKS = {
 }
 
 
+SEVERITY_ORDER = {
+    TaskSeverity.URGENT: 0,
+    TaskSeverity.WATCH: 1,
+    TaskSeverity.INFO: 2,
+}
+
+
+def _task_sort_key(task: GeneratedTask) -> tuple[int, date, str]:
+    return (SEVERITY_ORDER[task.severity], task.due_date, task.title)
+
+
 def generate_daily_tasks(
     farm: FarmProfile,
     forecast: WeatherForecast,
@@ -123,4 +134,4 @@ def generate_daily_tasks(
             )
         )
 
-    return tasks
+    return sorted(tasks, key=_task_sort_key)
