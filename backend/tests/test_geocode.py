@@ -1,4 +1,10 @@
-from app.geocode import Coordinates, StaticGeocoder, coordinates_from_open_meteo
+from app.geocode import (
+    Coordinates,
+    CompositeGeocoder,
+    StaticGeocoder,
+    coordinates_from_open_meteo,
+    coordinates_from_zippopotam,
+)
 
 
 def test_open_meteo_result_is_disambiguated_by_state() -> None:
@@ -48,8 +54,39 @@ def test_open_meteo_returns_none_without_us_results() -> None:
     assert coordinates_from_open_meteo({"results": []}, "SC") is None
 
 
-def test_static_geocoder_matches_case_insensitively() -> None:
-    geocoder = StaticGeocoder({("Greenville", "SC"): Coordinates(34.85, -82.40)})
+def test_zippopotam_reads_first_place() -> None:
+    payload = {
+        "post code": "29601",
+        "places": [
+            {"place name": "Greenville", "latitude": "34.8419", "longitude": "-82.4013"}
+        ],
+    }
 
-    assert geocoder.locate("greenville", "sc") == Coordinates(34.85, -82.40)
-    assert geocoder.locate("Nowhere", "SC") is None
+    assert coordinates_from_zippopotam(payload) == Coordinates(34.8419, -82.4013)
+
+
+def test_zippopotam_returns_none_without_places() -> None:
+    assert coordinates_from_zippopotam({"places": []}) is None
+
+
+def test_static_geocoder_normalizes_town_and_zip_keys() -> None:
+    geocoder = StaticGeocoder(
+        {
+            "Greenville, SC": Coordinates(34.85, -82.40),
+            "29601": Coordinates(34.8419, -82.4013),
+        }
+    )
+
+    assert geocoder.locate("greenville,  sc") == Coordinates(34.85, -82.40)
+    assert geocoder.locate("29601") == Coordinates(34.8419, -82.4013)
+    assert geocoder.locate("Nowhere, SC") is None
+
+
+def test_composite_geocoder_routes_zip_and_town() -> None:
+    zip_geocoder = StaticGeocoder({"29601": Coordinates(34.84, -82.40)})
+    town_geocoder = StaticGeocoder({"Piedmont, SC": Coordinates(34.70, -82.46)})
+    composite = CompositeGeocoder([zip_geocoder, town_geocoder])
+
+    assert composite.locate("29601") == Coordinates(34.84, -82.40)
+    assert composite.locate("Piedmont, SC") == Coordinates(34.70, -82.46)
+    assert composite.locate("Unknown") is None

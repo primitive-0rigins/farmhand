@@ -14,10 +14,12 @@ from app.weather import DemoWeatherProvider, WeatherProvider
 DEMO_LATITUDE = 34.85
 DEMO_LONGITUDE = -82.40
 
-# Swap these for OpenMeteoGeocoder() and NWSWeatherProvider() to run live:
-# the farm's town then drives a real forecast, still with no farmer sign-in.
+# To run live, swap in a keyless geocoder that accepts a town or a ZIP:
+#   CompositeGeocoder([ZippopotamGeocoder(), OpenMeteoGeocoder()])
+# plus NWSWeatherProvider(). The farm's location then drives a real forecast,
+# still with no farmer sign-in.
 geocoder: Geocoder = StaticGeocoder(
-    {("Greenville", "SC"): Coordinates(DEMO_LATITUDE, DEMO_LONGITUDE)}
+    {"Greenville, SC": Coordinates(DEMO_LATITUDE, DEMO_LONGITUDE)}
 )
 weather_provider: WeatherProvider = DemoWeatherProvider()
 
@@ -76,7 +78,7 @@ def today() -> TodayResponse:
     # The farm's town drives the forecast: geocode it once, then ask the
     # weather provider for that location. A real deployment stores the result
     # so it is not looked up on every request.
-    location = geocoder.locate(farm.city, farm.state) or Coordinates(
+    location = geocoder.locate(f"{farm.city}, {farm.state}") or Coordinates(
         DEMO_LATITUDE, DEMO_LONGITUDE
     )
     forecasts = weather_provider.daily_forecasts(location.latitude, location.longitude)
