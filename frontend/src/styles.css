@@ -280,6 +280,36 @@ nav button:hover {
   margin-top: 5px;
 }
 
+.playbook-editor {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  max-width: 760px;
+}
+
+.playbook-editor label {
+  color: #48544b;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.playbook-editor input,
+.playbook-editor textarea {
+  background: #fffdfa;
+  border: 1px solid #d8d1c2;
+  border-radius: 6px;
+  color: #26352b;
+  font: inherit;
+  padding: 9px 10px;
+  width: min(100%, 620px);
+}
+
+.playbook-editor textarea {
+  resize: vertical;
+}
+
 .badge {
   background: #e9efe6;
   border-radius: 999px;
@@ -290,7 +320,9 @@ nav button:hover {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
   margin-left: 16px;
 }
 

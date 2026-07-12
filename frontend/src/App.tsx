@@ -33,6 +33,11 @@ type WeekDayPlan = {
   top_task: string | null;
 };
 
+type PlaybookOverride = {
+  title: string;
+  steps: string[];
+};
+
 type TodayResponse = {
   farm: {
     name: string;
@@ -90,6 +95,10 @@ function App() {
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
   const [snoozedTasks, setSnoozedTasks] = useState<Set<string>>(new Set());
   const [openReasons, setOpenReasons] = useState<Set<string>>(new Set());
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftSteps, setDraftSteps] = useState("");
+  const [playbookOverrides, setPlaybookOverrides] = useState<Record<string, PlaybookOverride>>({});
 
   useEffect(() => {
     fetch(`${API_BASE}/today`)
@@ -103,17 +112,31 @@ function App() {
       .catch((caught: Error) => setError(caught.message));
   }, []);
 
+  const tasks = useMemo(
+    () =>
+      today?.tasks.map((task) => {
+        const override = playbookOverrides[task.source_rule ?? task.id];
+        if (!override) return task;
+
+        return {
+          ...task,
+          title: override.title,
+          steps: override.steps,
+        };
+      }) ?? [],
+    [playbookOverrides, today],
+  );
   const activeTasks = useMemo(
-    () => today?.tasks.filter((task) => !doneTasks.has(task.id) && !snoozedTasks.has(task.id)) ?? [],
-    [doneTasks, snoozedTasks, today],
+    () => tasks.filter((task) => !doneTasks.has(task.id) && !snoozedTasks.has(task.id)),
+    [doneTasks, snoozedTasks, tasks],
   );
   const completedTasks = useMemo(
-    () => today?.tasks.filter((task) => doneTasks.has(task.id)) ?? [],
-    [doneTasks, today],
+    () => tasks.filter((task) => doneTasks.has(task.id)),
+    [doneTasks, tasks],
   );
   const snoozedTaskList = useMemo(
-    () => today?.tasks.filter((task) => snoozedTasks.has(task.id)) ?? [],
-    [snoozedTasks, today],
+    () => tasks.filter((task) => snoozedTasks.has(task.id)),
+    [snoozedTasks, tasks],
   );
 
   function toggleSet(setter: React.Dispatch<React.SetStateAction<Set<string>>>, taskId: string) {
@@ -126,6 +149,31 @@ function App() {
       }
       return next;
     });
+  }
+
+  function startEdit(task: TodayTask) {
+    setEditingTaskId(task.id);
+    setDraftTitle(task.title);
+    setDraftSteps(task.steps.join("\n"));
+  }
+
+  function savePlaybook(task: TodayTask) {
+    const title = draftTitle.trim();
+    const steps = draftSteps
+      .split("\n")
+      .map((step) => step.trim())
+      .filter(Boolean);
+
+    if (!title) return;
+
+    setPlaybookOverrides((current) => ({
+      ...current,
+      [task.source_rule ?? task.id]: {
+        title,
+        steps,
+      },
+    }));
+    setEditingTaskId(null);
   }
 
   return (
@@ -219,6 +267,7 @@ function App() {
                 activeTasks.length > 0 ? (
                   activeTasks.map((task) => {
                     const reasonOpen = openReasons.has(task.id);
+                    const isEditing = editingTaskId === task.id;
                     return (
                       <article className={`task ${task.severity}`} key={task.id}>
                         <div className="task-main">
@@ -227,8 +276,30 @@ function App() {
                             <span>{formatDate(task.due_date)}</span>
                             <span>{ruleLabel(task.source_rule)}</span>
                           </div>
-                          <h2>{task.title}</h2>
-                          <p>{task.reason}</p>
+                          {isEditing ? (
+                            <div className="playbook-editor">
+                              <label>
+                                Task name
+                                <input
+                                  value={draftTitle}
+                                  onChange={(event) => setDraftTitle(event.target.value)}
+                                />
+                              </label>
+                              <label>
+                                Steps
+                                <textarea
+                                  rows={4}
+                                  value={draftSteps}
+                                  onChange={(event) => setDraftSteps(event.target.value)}
+                                />
+                              </label>
+                            </div>
+                          ) : (
+                            <>
+                              <h2>{task.title}</h2>
+                              <p>{task.reason}</p>
+                            </>
+                          )}
                           {reasonOpen ? (
                             <div className="reason-panel">
                               <strong>Why this is here</strong>
@@ -244,18 +315,37 @@ function App() {
                           ) : null}
                         </div>
                         <div className="actions">
-                          <button onClick={() => toggleSet(setDoneTasks, task.id)}>
-                            <CheckCircle2 size={16} />
-                            Done
-                          </button>
-                          <button onClick={() => toggleSet(setSnoozedTasks, task.id)}>
-                            <Clock3 size={16} />
-                            Snooze
-                          </button>
-                          <button onClick={() => toggleSet(setOpenReasons, task.id)}>
-                            <ChevronDown size={16} />
-                            Why
-                          </button>
+                          {isEditing ? (
+                            <>
+                              <button onClick={() => savePlaybook(task)}>
+                                <CheckCircle2 size={16} />
+                                Save
+                              </button>
+                              <button onClick={() => setEditingTaskId(null)}>
+                                <RotateCcw size={16} />
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => toggleSet(setDoneTasks, task.id)}>
+                                <CheckCircle2 size={16} />
+                                Done
+                              </button>
+                              <button onClick={() => toggleSet(setSnoozedTasks, task.id)}>
+                                <Clock3 size={16} />
+                                Snooze
+                              </button>
+                              <button onClick={() => startEdit(task)}>
+                                <Pencil size={16} />
+                                Edit
+                              </button>
+                              <button onClick={() => toggleSet(setOpenReasons, task.id)}>
+                                <ChevronDown size={16} />
+                                Why
+                              </button>
+                            </>
+                          )}
                         </div>
                       </article>
                     );
