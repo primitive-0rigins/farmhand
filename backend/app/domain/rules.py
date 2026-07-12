@@ -123,6 +123,17 @@ def generate_daily_tasks(
             )
         )
 
+    if "tomato" in {crop.lower() for crop in farm.crops} and (forecast.heavy_rain_inches or 0) >= 1:
+        tasks.append(
+            GeneratedTask(
+                title="Scout tomatoes for leaf disease after wet weather.",
+                due_date=forecast.forecast_date,
+                severity=TaskSeverity.WATCH,
+                reason="Recent or forecast rain above 1 inch raises tomato leaf disease pressure.",
+                source_rule="tomato_wet_weather_disease_pressure",
+            )
+        )
+
     if "tomato" in {crop.lower() for crop in farm.crops} and today.month in {6, 7, 8}:
         tasks.append(
             GeneratedTask(

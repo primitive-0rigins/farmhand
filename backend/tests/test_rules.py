@@ -108,6 +108,49 @@ def test_heat_irrigation_rule_does_not_fire_without_irrigation() -> None:
     assert not any(task.source_rule == "heat_irrigation_playbook" for task in tasks)
 
 
+def test_tomato_disease_pressure_follows_heavy_rain() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 6, 29),
+        heavy_rain_inches=1.2,
+    )
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 6, 28))
+
+    disease_task = next(
+        task for task in tasks if task.source_rule == "tomato_wet_weather_disease_pressure"
+    )
+    assert disease_task.severity == TaskSeverity.WATCH
+    assert "disease pressure" in disease_task.reason
+    assert disease_task.due_date == date(2026, 6, 29)
+
+
+def test_tomato_disease_pressure_requires_tomato_crop() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["pepper"],
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 6, 29),
+        heavy_rain_inches=1.2,
+    )
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 6, 28))
+
+    assert not any(
+        task.source_rule == "tomato_wet_weather_disease_pressure" for task in tasks
+    )
+
+
 def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
     farm = FarmProfile(
         name="Demo Farm",
