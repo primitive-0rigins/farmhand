@@ -4,9 +4,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_allowed_origins
-from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity, WeatherForecast
+from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.schemas import TodayResponse
+from app.weather import DemoWeatherProvider, WeatherProvider
+
+# Greenville, SC demo coordinates. A real deployment geocodes the farm's
+# location once at setup and stores lat/lon; the provider needs nothing else.
+DEMO_LATITUDE = 34.85
+DEMO_LONGITUDE = -82.40
+
+# Swap DemoWeatherProvider() for NWSWeatherProvider() to pull live weather.
+weather_provider: WeatherProvider = DemoWeatherProvider()
 
 app = FastAPI(title="Farmhand")
 app.add_middleware(
@@ -48,20 +57,7 @@ def serialize_task(task: GeneratedTask) -> dict[str, object]:
 @app.get("/today", response_model=TodayResponse)
 def today() -> TodayResponse:
     today_date = date(2026, 6, 26)
-    forecasts = [
-        WeatherForecast(forecast_date=today_date, heat_index_f=92),
-        WeatherForecast(
-            forecast_date=date(2026, 6, 27),
-            thunderstorm_risk=True,
-            high_wind_mph=34,
-            heat_index_f=91,
-        ),
-        WeatherForecast(forecast_date=date(2026, 6, 28), heat_index_f=89),
-        WeatherForecast(forecast_date=date(2026, 6, 29), heavy_rain_inches=1.1),
-        WeatherForecast(forecast_date=date(2026, 6, 30), heat_index_f=93),
-        WeatherForecast(forecast_date=date(2026, 7, 1), heat_index_f=95),
-        WeatherForecast(forecast_date=date(2026, 7, 2), heat_index_f=88),
-    ]
+    forecasts = weather_provider.daily_forecasts(DEMO_LATITUDE, DEMO_LONGITUDE)
     forecast = forecasts[1]
     farm = FarmProfile(
         name="Demo Farm",
