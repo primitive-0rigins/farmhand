@@ -68,3 +68,41 @@ def test_tomato_scouting_arrives_in_summer() -> None:
     tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 1))
 
     assert any(task.source_rule == "tomato_summer_scouting" for task in tasks)
+
+
+def test_heat_irrigation_rule_requires_heat_and_irrigation_asset() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        assets=[FarmAsset(name="Drip irrigation", kind="irrigation")],
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 7, 2),
+        heat_index_f=94,
+    )
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 1))
+
+    heat_task = next(task for task in tasks if task.source_rule == "heat_irrigation_playbook")
+    assert heat_task.severity == TaskSeverity.WATCH
+    assert "irrigation equipment" in heat_task.reason
+    assert heat_task.due_date == date(2026, 7, 1)
+
+
+def test_heat_irrigation_rule_does_not_fire_without_irrigation() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 7, 2),
+        heat_index_f=94,
+    )
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 1))
+
+    assert not any(task.source_rule == "heat_irrigation_playbook" for task in tasks)

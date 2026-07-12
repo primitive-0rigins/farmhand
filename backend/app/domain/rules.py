@@ -22,6 +22,14 @@ DEFAULT_PLAYBOOKS = {
             "Check tender crops and greenhouse heat backup.",
         ],
     ),
+    "heat_irrigation": Playbook(
+        trigger="heat_irrigation",
+        title="Check irrigation before heat builds",
+        steps=[
+            "Walk main lines and look for leaks or clogged emitters.",
+            "Water early enough that leaves dry before evening.",
+        ],
+    ),
 }
 
 
@@ -88,6 +96,19 @@ def generate_daily_tasks(
                 reason="Frost risk is forecast for tender crops.",
                 steps=list(playbook.steps),
                 source_rule="frost_playbook",
+            )
+        )
+
+    if (forecast.heat_index_f or 0) >= 90 and farm.has_asset_kind("irrigation"):
+        playbook = active_playbooks["heat_irrigation"]
+        tasks.append(
+            GeneratedTask(
+                title=playbook.title,
+                due_date=today,
+                severity=TaskSeverity.WATCH,
+                reason="Heat index is forecast above 90F and this farm has irrigation equipment.",
+                steps=list(playbook.steps),
+                source_rule="heat_irrigation_playbook",
             )
         )
 
