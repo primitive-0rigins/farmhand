@@ -23,9 +23,16 @@ the data model, task reasons, and reusable playbook workflow.
 
 ```bash
 git clone https://github.com/primitive-0rigins/farmhand.git
-cd farmhand/backend
-python -m pip install fastapi "uvicorn[standard]" pydantic sqlalchemy "psycopg[binary]" pytest
-python -m pytest
+cd farmhand
+
+cd backend
+python3 -m venv .venv
+.venv/bin/python -m pip install fastapi "uvicorn[standard]" pydantic sqlalchemy "psycopg[binary]" pytest
+.venv/bin/python -m pytest
+
+cd ../frontend
+npm install
+npm run build
 ```
 
 ## Product Promise
@@ -76,12 +83,25 @@ farmhand/
 
 ## Local Development
 
-Backend tests currently exercise pure domain logic and do not require Postgres.
+Backend tests currently exercise demo API and domain logic and do not require Postgres.
 
 ```bash
 cd backend
-python3 -m pytest
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Frontend install/build is intentionally not bootstrapped in this first commit.
-Use `npm install` from `frontend/` when ready to run the UI locally.
+```bash
+cd frontend
+npm run dev -- --host 127.0.0.1
+```
+
+The frontend reads `VITE_API_BASE_URL`, defaulting to `http://localhost:8000`.
+The backend reads `FARMHAND_ALLOWED_ORIGINS`, defaulting to local Vite origins.
+Use `.env.example` as the public-safe template.
+
+## Public Repo Safety
+
+- Keep demo farms city-level and public-safe.
+- Do not commit real farm addresses, customer data, API keys, tokens, logs, or `.env` files.
+- Keep deployed CORS origins explicit with `FARMHAND_ALLOWED_ORIGINS`.
+- See `SECURITY.md` before adding persistence, accounts, weather providers, or AI providers.

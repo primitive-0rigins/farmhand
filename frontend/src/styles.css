@@ -13,6 +13,10 @@ button {
   font: inherit;
 }
 
+button svg {
+  flex: 0 0 auto;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -87,12 +91,17 @@ nav button:hover {
 
 .primary-action,
 .actions button {
+  align-items: center;
   background: #2f6b45;
   border: 0;
   border-radius: 6px;
   color: white;
   cursor: pointer;
+  display: inline-flex;
+  gap: 7px;
+  justify-content: center;
   padding: 10px 14px;
+  white-space: nowrap;
 }
 
 .summary-grid {
@@ -133,14 +142,50 @@ nav button:hover {
   gap: 12px;
 }
 
-.task {
+.task,
+.empty-state {
   align-items: center;
   background: white;
   border: 1px solid #ddd8ca;
   border-radius: 8px;
+}
+
+.task {
   display: flex;
   justify-content: space-between;
   padding: 18px;
+}
+
+.task.urgent {
+  border-left: 4px solid #bd5432;
+}
+
+.task.watch {
+  border-left: 4px solid #bd7b32;
+}
+
+.task.info {
+  border-left: 4px solid #2f6b45;
+}
+
+.task-main {
+  min-width: 0;
+}
+
+.task-meta {
+  align-items: center;
+  color: #69746c;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.task-meta span:not(.badge) {
+  background: #f4f1e8;
+  border: 1px solid #e3ddcf;
+  border-radius: 999px;
+  padding: 4px 8px;
 }
 
 .task h2 {
@@ -151,6 +196,30 @@ nav button:hover {
 .task p {
   color: #5f6b63;
   margin: 0;
+}
+
+.reason-panel {
+  background: #f7f5ed;
+  border: 1px solid #e4ddcc;
+  border-radius: 6px;
+  margin-top: 14px;
+  max-width: 760px;
+  padding: 12px;
+}
+
+.reason-panel strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.reason-panel ol {
+  color: #3d493f;
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+.reason-panel li + li {
+  margin-top: 5px;
 }
 
 .badge {
@@ -164,11 +233,64 @@ nav button:hover {
 .actions {
   display: flex;
   gap: 8px;
+  margin-left: 16px;
 }
 
 .actions button {
   background: #eef2ec;
   color: #26352b;
+  min-width: 88px;
+}
+
+.empty-state {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 24px;
+}
+
+.empty-state svg {
+  color: #bd5432;
+}
+
+.empty-state p {
+  color: #5f6b63;
+  margin: 0;
+}
+
+.review-lanes {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.review-lanes h2 {
+  color: #48544b;
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.review-item {
+  align-items: center;
+  background: #f8f6ef;
+  border: 1px solid #e0dacd;
+  border-radius: 6px;
+  color: #334137;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-top: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.review-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
@@ -192,5 +314,34 @@ nav button:hover {
     align-items: flex-start;
     gap: 14px;
     flex-direction: column;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  .review-lanes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace {
+    padding: 18px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    gap: 14px;
+    flex-direction: column;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
   }
 }
