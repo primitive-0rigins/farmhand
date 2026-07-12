@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.domain.models import FarmAsset, FarmProfile, Playbook, TaskSeverity, WeatherForecast
-from app.domain.rules import generate_daily_tasks
+from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 
 
 def test_zone_calendar_generates_monthly_task() -> None:
@@ -135,3 +135,52 @@ def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
         TaskSeverity.INFO,
     ]
     assert tasks[0].source_rule == "bad_weather_playbook"
+
+
+def test_weekly_plan_returns_seven_days_from_start_date() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+    )
+
+    plan = generate_weekly_plan(
+        farm=farm,
+        forecasts=[],
+        start_date=date(2026, 6, 26),
+    )
+
+    assert list(plan) == [
+        date(2026, 6, 26),
+        date(2026, 6, 27),
+        date(2026, 6, 28),
+        date(2026, 6, 29),
+        date(2026, 6, 30),
+        date(2026, 7, 1),
+        date(2026, 7, 2),
+    ]
+
+
+def test_weekly_plan_applies_forecast_to_matching_day() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        assets=[FarmAsset(name="Main greenhouse", kind="greenhouse")],
+    )
+    forecast = WeatherForecast(
+        forecast_date=date(2026, 6, 28),
+        thunderstorm_risk=True,
+        high_wind_mph=32,
+    )
+
+    plan = generate_weekly_plan(
+        farm=farm,
+        forecasts=[forecast],
+        start_date=date(2026, 6, 26),
+    )
+
+    assert any(task.source_rule == "bad_weather_playbook" for task in plan[date(2026, 6, 28)])
+    assert not any(task.source_rule == "bad_weather_playbook" for task in plan[date(2026, 6, 27)])

@@ -25,6 +25,14 @@ type TodayTask = {
   source_rule: string | null;
 };
 
+type WeekDayPlan = {
+  date: string;
+  task_count: number;
+  urgent_count: number;
+  watch_count: number;
+  top_task: string | null;
+};
+
 type TodayResponse = {
   farm: {
     name: string;
@@ -41,6 +49,7 @@ type TodayResponse = {
     heat_index_f: number | null;
   };
   tasks: TodayTask[];
+  week: WeekDayPlan[];
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -49,6 +58,14 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
+    day: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
     day: "numeric",
   }).format(new Date(`${value}T12:00:00`));
 }
@@ -172,10 +189,30 @@ function App() {
               </div>
               <div className="panel">
                 <CalendarDays />
-                <span>Snoozed</span>
-                <strong>{snoozedTasks.size} tasks</strong>
+                <span>This week</span>
+                <strong>
+                  {today?.week.reduce((total, day) => total + day.task_count, 0) ?? 0} planned
+                </strong>
               </div>
             </section>
+
+            {today ? (
+              <section className="week-strip" aria-label="This week">
+                {today.week.map((day) => (
+                  <article className="week-day" key={day.date}>
+                    <div>
+                      <span>{formatShortDate(day.date)}</span>
+                      <strong>{day.task_count} tasks</strong>
+                    </div>
+                    <p>{day.top_task ?? "No generated work"}</p>
+                    <div className="week-counts">
+                      {day.urgent_count > 0 ? <span className="urgent">Urgent {day.urgent_count}</span> : null}
+                      {day.watch_count > 0 ? <span>Watch {day.watch_count}</span> : null}
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ) : null}
 
             <section className="task-list" aria-label="Today tasks">
               {today ? (

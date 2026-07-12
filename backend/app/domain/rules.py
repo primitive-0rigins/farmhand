@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from app.domain.models import FarmProfile, GeneratedTask, Playbook, TaskSeverity, WeatherForecast
 
@@ -135,3 +135,25 @@ def generate_daily_tasks(
         )
 
     return sorted(tasks, key=_task_sort_key)
+
+
+def generate_weekly_plan(
+    farm: FarmProfile,
+    forecasts: list[WeatherForecast],
+    start_date: date,
+    playbooks: dict[str, Playbook] | None = None,
+) -> dict[date, list[GeneratedTask]]:
+    forecast_by_date = {forecast.forecast_date: forecast for forecast in forecasts}
+    plan: dict[date, list[GeneratedTask]] = {}
+
+    for offset in range(7):
+        plan_date = start_date + timedelta(days=offset)
+        forecast = forecast_by_date.get(plan_date, WeatherForecast(forecast_date=plan_date))
+        plan[plan_date] = generate_daily_tasks(
+            farm=farm,
+            forecast=forecast,
+            today=plan_date,
+            playbooks=playbooks,
+        )
+
+    return plan

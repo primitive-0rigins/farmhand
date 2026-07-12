@@ -137,6 +137,64 @@ nav button:hover {
   border-color: #bd7b32;
 }
 
+.week-strip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.week-day {
+  background: white;
+  border: 1px solid #ddd8ca;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+}
+
+.week-day div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.week-day span {
+  color: #69746c;
+  font-size: 13px;
+}
+
+.week-day strong {
+  color: #26352b;
+  font-size: 16px;
+}
+
+.week-day p {
+  color: #4f5d53;
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0;
+  min-height: 36px;
+}
+
+.week-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.week-counts span {
+  background: #eef2ec;
+  border-radius: 999px;
+  color: #334137;
+  padding: 3px 7px;
+}
+
+.week-counts span.urgent {
+  background: #f7e8dc;
+  color: #8c3e26;
+}
+
 .task-list {
   display: grid;
   gap: 12px;
@@ -310,6 +368,10 @@ nav button:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .week-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .task {
     align-items: flex-start;
     gap: 14px;
@@ -342,6 +404,10 @@ nav button:hover {
   }
 
   .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .week-strip {
     grid-template-columns: 1fr;
   }
 }

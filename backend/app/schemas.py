@@ -28,8 +28,17 @@ class TodayTask(BaseModel):
     source_rule: str | None
 
 
+class WeekDayPlan(BaseModel):
+    date: str
+    task_count: int
+    urgent_count: int
+    watch_count: int
+    top_task: str | None
+
+
 class TodayResponse(BaseModel):
     farm: FarmSummary
     today: str
     forecast: ForecastSummary
     tasks: list[TodayTask]
+    week: list[WeekDayPlan]
