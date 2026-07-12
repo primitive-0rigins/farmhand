@@ -373,17 +373,14 @@ function App() {
                               <p>{task.reason}</p>
                             </>
                           )}
-                          {reasonOpen ? (
+                          {reasonOpen && task.steps.length > 0 ? (
                             <div className="reason-panel">
-                              <strong>Why this is here</strong>
-                              <p>{task.reason}</p>
-                              {task.steps.length > 0 ? (
-                                <ol>
-                                  {task.steps.map((step) => (
-                                    <li key={step}>{step}</li>
-                                  ))}
-                                </ol>
-                              ) : null}
+                              <strong>Steps</strong>
+                              <ol>
+                                {task.steps.map((step) => (
+                                  <li key={step}>{step}</li>
+                                ))}
+                              </ol>
                             </div>
                           ) : null}
                         </div>
@@ -413,10 +410,12 @@ function App() {
                                 <Pencil size={16} />
                                 Edit
                               </button>
-                              <button onClick={() => toggleSet(setOpenReasons, task.id)}>
-                                <ChevronDown size={16} />
-                                Why
-                              </button>
+                              {task.steps.length > 0 ? (
+                                <button onClick={() => toggleSet(setOpenReasons, task.id)}>
+                                  <ChevronDown size={16} />
+                                  Steps
+                                </button>
+                              ) : null}
                             </>
                           )}
                         </div>
