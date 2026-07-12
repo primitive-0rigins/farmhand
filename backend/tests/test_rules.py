@@ -151,6 +151,82 @@ def test_tomato_disease_pressure_requires_tomato_crop() -> None:
     )
 
 
+def test_greenhouse_start_reminder_arrives_in_late_winter() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato", "pepper"],
+    )
+    forecast = WeatherForecast(forecast_date=date(2026, 2, 15))
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 2, 15))
+
+    start_task = next(
+        task for task in tasks if task.source_rule == "warm_season_greenhouse_start"
+    )
+    assert start_task.severity == TaskSeverity.INFO
+    assert "pepper, tomato" in start_task.reason
+
+
+def test_transplant_reminder_arrives_after_frost_season() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+    )
+    forecast = WeatherForecast(forecast_date=date(2026, 4, 20))
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 4, 20))
+
+    assert any(task.source_rule == "warm_season_transplant" for task in tasks)
+
+
+def test_harvest_window_arrives_in_summer_for_warm_season_crops() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["pepper"],
+    )
+    forecast = WeatherForecast(forecast_date=date(2026, 7, 10))
+
+    tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 10))
+
+    harvest_task = next(
+        task for task in tasks if task.source_rule == "warm_season_harvest_window"
+    )
+    assert harvest_task.severity == TaskSeverity.INFO
+    assert harvest_task.due_date == date(2026, 7, 10)
+
+
+def test_crop_timing_rules_skip_farms_without_warm_season_crops() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["lettuce"],
+    )
+
+    for today in (date(2026, 2, 15), date(2026, 4, 20), date(2026, 7, 10)):
+        forecast = WeatherForecast(forecast_date=today)
+        tasks = generate_daily_tasks(farm, forecast, today=today)
+        assert not any(
+            task.source_rule
+            in {
+                "warm_season_greenhouse_start",
+                "warm_season_transplant",
+                "warm_season_harvest_window",
+            }
+            for task in tasks
+        )
+
+
 def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
     farm = FarmProfile(
         name="Demo Farm",
@@ -175,6 +251,7 @@ def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
         TaskSeverity.URGENT,
         TaskSeverity.WATCH,
         TaskSeverity.WATCH,
+        TaskSeverity.INFO,
         TaskSeverity.INFO,
     ]
     assert tasks[0].source_rule == "bad_weather_playbook"

@@ -49,6 +49,9 @@ ZONE_8B_SEASONAL_TASKS = {
 }
 
 
+WARM_SEASON_CROPS = frozenset({"tomato", "pepper"})
+
+
 SEVERITY_ORDER = {
     TaskSeverity.URGENT: 0,
     TaskSeverity.WATCH: 1,
@@ -58,6 +61,10 @@ SEVERITY_ORDER = {
 
 def _task_sort_key(task: GeneratedTask) -> tuple[int, date, str]:
     return (SEVERITY_ORDER[task.severity], task.due_date, task.title)
+
+
+def _warm_season_crops(farm: FarmProfile) -> list[str]:
+    return sorted({crop.lower() for crop in farm.crops} & WARM_SEASON_CROPS)
 
 
 def generate_daily_tasks(
@@ -144,6 +151,40 @@ def generate_daily_tasks(
                 source_rule="tomato_summer_scouting",
             )
         )
+
+    warm_season = _warm_season_crops(farm)
+    if warm_season:
+        crop_list = ", ".join(warm_season)
+        if today.month == 2:
+            tasks.append(
+                GeneratedTask(
+                    title="Start warm-season seedlings under cover.",
+                    due_date=today,
+                    severity=TaskSeverity.INFO,
+                    reason=f"Warm-season crops on this farm ({crop_list}) transplant in spring, so start seedlings under cover in late winter.",
+                    source_rule="warm_season_greenhouse_start",
+                )
+            )
+        if today.month == 4:
+            tasks.append(
+                GeneratedTask(
+                    title="Transplant warm-season crops after the last frost.",
+                    due_date=today,
+                    severity=TaskSeverity.INFO,
+                    reason=f"Warm-season crops on this farm ({crop_list}) move outside once the last spring frost has passed.",
+                    source_rule="warm_season_transplant",
+                )
+            )
+        if today.month in {6, 7, 8, 9}:
+            tasks.append(
+                GeneratedTask(
+                    title="Harvest ripe warm-season crops.",
+                    due_date=today,
+                    severity=TaskSeverity.INFO,
+                    reason=f"Warm-season crops on this farm ({crop_list}) are in their summer harvest window, so pick ripe fruit regularly to keep plants producing.",
+                    source_rule="warm_season_harvest_window",
+                )
+            )
 
     return sorted(tasks, key=_task_sort_key)
 

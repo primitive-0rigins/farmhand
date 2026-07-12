@@ -41,9 +41,9 @@
 
 - [x] Zone-aware monthly calendar seed
 - [x] Crop-specific scouting windows
-- [ ] Greenhouse start reminders
-- [ ] Transplant reminders
-- [ ] Harvest windows
+- [x] Greenhouse start reminders
+- [x] Transplant reminders
+- [x] Harvest windows
 - [ ] Succession planting reminders
 
 ## Phase 5 - Pest And Disease Pressure
