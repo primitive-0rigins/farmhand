@@ -326,6 +326,50 @@ def test_fall_frost_watch_lands_the_month_before_first_frost() -> None:
     assert any(task.source_rule == "frost_watch_fall" for task in october)
 
 
+def test_disease_watch_anticipates_wet_weather_in_the_forecast_window() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+    )
+    today = date(2026, 6, 26)
+    forecast = WeatherForecast(forecast_date=today)
+    upcoming = [
+        WeatherForecast(forecast_date=date(2026, 6, 27)),
+        WeatherForecast(forecast_date=date(2026, 6, 29), heavy_rain_inches=1.1),
+    ]
+
+    tasks = generate_daily_tasks(farm, forecast, today=today, upcoming=upcoming)
+
+    watch = next(
+        task for task in tasks if task.source_rule == "tomato_wet_weather_disease_watch"
+    )
+    assert watch.severity == TaskSeverity.WATCH
+    assert watch.due_date == today
+    assert "Jun 29" in watch.reason
+
+
+def test_disease_watch_stays_quiet_without_incoming_wet_weather() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+    )
+    today = date(2026, 6, 26)
+    forecast = WeatherForecast(forecast_date=today)
+    upcoming = [WeatherForecast(forecast_date=date(2026, 6, 28), heat_index_f=92)]
+
+    tasks = generate_daily_tasks(farm, forecast, today=today, upcoming=upcoming)
+
+    assert not any(
+        task.source_rule == "tomato_wet_weather_disease_watch" for task in tasks
+    )
+
+
 def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
     farm = FarmProfile(
         name="Demo Farm",

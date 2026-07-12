@@ -94,8 +94,10 @@ def generate_daily_tasks(
     forecast: WeatherForecast,
     today: date,
     playbooks: dict[str, Playbook] | None = None,
+    upcoming: list[WeatherForecast] | None = None,
 ) -> list[GeneratedTask]:
     active_playbooks = {**DEFAULT_PLAYBOOKS, **(playbooks or {})}
+    upcoming = upcoming or []
     tasks: list[GeneratedTask] = []
 
     if farm.planting_zone.lower() == "8b":
@@ -152,7 +154,9 @@ def generate_daily_tasks(
             )
         )
 
-    if "tomato" in {crop.lower() for crop in farm.crops} and (forecast.heavy_rain_inches or 0) >= 1:
+    grows_tomato = "tomato" in {crop.lower() for crop in farm.crops}
+
+    if grows_tomato and (forecast.heavy_rain_inches or 0) >= 1:
         tasks.append(
             GeneratedTask(
                 title="Scout tomatoes for leaf disease after wet weather.",
@@ -162,6 +166,28 @@ def generate_daily_tasks(
                 source_rule="tomato_wet_weather_disease_pressure",
             )
         )
+
+    if grows_tomato:
+        wet_ahead = [
+            day
+            for day in upcoming
+            if day.forecast_date > today and (day.heavy_rain_inches or 0) >= 0.5
+        ]
+        if wet_ahead:
+            soonest = min(wet_ahead, key=lambda day: day.forecast_date)
+            tasks.append(
+                GeneratedTask(
+                    title="Get ahead of tomato leaf disease before wet weather.",
+                    due_date=today,
+                    severity=TaskSeverity.WATCH,
+                    reason=(
+                        f"Rain is in the forecast around {soonest.forecast_date:%b %d}, "
+                        "which raises tomato leaf disease pressure. Scout now, improve "
+                        "airflow, and water at the base instead of overhead."
+                    ),
+                    source_rule="tomato_wet_weather_disease_watch",
+                )
+            )
 
     if "tomato" in {crop.lower() for crop in farm.crops} and today.month in {6, 7, 8}:
         tasks.append(

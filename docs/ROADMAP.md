@@ -60,6 +60,12 @@
 - [ ] Pest arrival estimates
 - [x] Disease pressure estimates from rain
 - [x] Scout-now alerts with explainable reasons
+- [x] Forward-looking disease watch from the forecast window
+
+> Disease/fungus pressure is weather-driven, not calendar-driven, so its
+> anticipation reads the upcoming forecast rather than a fixed date. The logic
+> is wired against the demo forecast now; it earns real lead time once the
+> Phase 3 NOAA/NWS adapter supplies live multi-day weather.
 
 ## Phase 6 - Commercial Readiness
 

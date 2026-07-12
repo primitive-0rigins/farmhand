@@ -75,7 +75,10 @@ def today() -> TodayResponse:
             FarmAsset(name="Drip irrigation", kind="irrigation"),
         ],
     )
-    tasks = generate_daily_tasks(farm=farm, forecast=forecast, today=today_date)
+    upcoming = [item for item in forecasts if item.forecast_date > today_date]
+    tasks = generate_daily_tasks(
+        farm=farm, forecast=forecast, today=today_date, upcoming=upcoming
+    )
     week = generate_weekly_plan(farm=farm, forecasts=forecasts, start_date=today_date)
 
     return TodayResponse(
