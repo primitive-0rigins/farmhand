@@ -6,15 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_allowed_origins
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
+from app.geocode import Coordinates, Geocoder, StaticGeocoder
 from app.schemas import TodayResponse
 from app.weather import DemoWeatherProvider, WeatherProvider
 
-# Greenville, SC demo coordinates. A real deployment geocodes the farm's
-# location once at setup and stores lat/lon; the provider needs nothing else.
+# Greenville, SC demo coordinates, used as a fallback if geocoding is skipped.
 DEMO_LATITUDE = 34.85
 DEMO_LONGITUDE = -82.40
 
-# Swap DemoWeatherProvider() for NWSWeatherProvider() to pull live weather.
+# Swap these for OpenMeteoGeocoder() and NWSWeatherProvider() to run live:
+# the farm's town then drives a real forecast, still with no farmer sign-in.
+geocoder: Geocoder = StaticGeocoder(
+    {("Greenville", "SC"): Coordinates(DEMO_LATITUDE, DEMO_LONGITUDE)}
+)
 weather_provider: WeatherProvider = DemoWeatherProvider()
 
 app = FastAPI(title="Farmhand")
@@ -57,8 +61,6 @@ def serialize_task(task: GeneratedTask) -> dict[str, object]:
 @app.get("/today", response_model=TodayResponse)
 def today() -> TodayResponse:
     today_date = date(2026, 6, 26)
-    forecasts = weather_provider.daily_forecasts(DEMO_LATITUDE, DEMO_LONGITUDE)
-    forecast = forecasts[1]
     farm = FarmProfile(
         name="Demo Farm",
         city="Greenville",
@@ -71,6 +73,14 @@ def today() -> TodayResponse:
             FarmAsset(name="Drip irrigation", kind="irrigation"),
         ],
     )
+    # The farm's town drives the forecast: geocode it once, then ask the
+    # weather provider for that location. A real deployment stores the result
+    # so it is not looked up on every request.
+    location = geocoder.locate(farm.city, farm.state) or Coordinates(
+        DEMO_LATITUDE, DEMO_LONGITUDE
+    )
+    forecasts = weather_provider.daily_forecasts(location.latitude, location.longitude)
+    forecast = forecasts[1]
     upcoming = [item for item in forecasts if item.forecast_date > today_date]
     tasks = generate_daily_tasks(
         farm=farm, forecast=forecast, today=today_date, upcoming=upcoming

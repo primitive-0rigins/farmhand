@@ -29,7 +29,7 @@
 
 ## Phase 3 - Weather Rules
 
-- [ ] NOAA/NWS weather adapter
+- [x] NOAA/NWS weather adapter (keyless; town geocoding via Open-Meteo)
 - [x] Thunderstorm prep rules
 - [x] Frost prep rules
 - [x] Heat stress rules
