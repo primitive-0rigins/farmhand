@@ -23,7 +23,7 @@
 - [x] Today view
 - [x] This week view
 - [x] Task completion and snooze
-- [ ] Manual task creation
+- [x] Session-local manual task creation
 - [x] Generated task reasons
 - [x] Session-local editable task templates
 

@@ -99,6 +99,10 @@ function App() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftSteps, setDraftSteps] = useState("");
   const [playbookOverrides, setPlaybookOverrides] = useState<Record<string, PlaybookOverride>>({});
+  const [manualTasks, setManualTasks] = useState<TodayTask[]>([]);
+  const [showManualForm, setShowManualForm] = useState(false);
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualReason, setManualReason] = useState("");
 
   useEffect(() => {
     fetch(`${API_BASE}/today`)
@@ -114,17 +118,20 @@ function App() {
 
   const tasks = useMemo(
     () =>
-      today?.tasks.map((task) => {
-        const override = playbookOverrides[task.source_rule ?? task.id];
-        if (!override) return task;
+      [
+        ...(today?.tasks ?? []),
+        ...manualTasks,
+      ].map((task) => {
+          const override = playbookOverrides[task.source_rule ?? task.id];
+          if (!override) return task;
 
-        return {
-          ...task,
-          title: override.title,
-          steps: override.steps,
-        };
-      }) ?? [],
-    [playbookOverrides, today],
+          return {
+            ...task,
+            title: override.title,
+            steps: override.steps,
+          };
+        }),
+    [manualTasks, playbookOverrides, today],
   );
   const activeTasks = useMemo(
     () => tasks.filter((task) => !doneTasks.has(task.id) && !snoozedTasks.has(task.id)),
@@ -176,6 +183,31 @@ function App() {
     setEditingTaskId(null);
   }
 
+  function saveManualTask() {
+    if (!today) return;
+
+    const title = manualTitle.trim();
+    const reason = manualReason.trim() || "Created manually for today's work.";
+
+    if (!title) return;
+
+    setManualTasks((current) => [
+      ...current,
+      {
+        id: `manual-${Date.now()}`,
+        title,
+        due_date: today.today,
+        severity: "info",
+        reason,
+        steps: [],
+        source_rule: null,
+      },
+    ]);
+    setManualTitle("");
+    setManualReason("");
+    setShowManualForm(false);
+  }
+
   return (
     <main className="app-shell">
       <aside className="sidebar">
@@ -205,7 +237,7 @@ function App() {
             <p>{today ? formatDate(today.today) : "Loading today"}</p>
             <h1>Today on the farm</h1>
           </div>
-          <button className="primary-action">
+          <button className="primary-action" onClick={() => setShowManualForm((current) => !current)}>
             <Pencil size={17} />
             Add task
           </button>
@@ -219,6 +251,36 @@ function App() {
           </section>
         ) : (
           <>
+            {showManualForm ? (
+              <section className="manual-task-form" aria-label="Add manual task">
+                <label>
+                  Task name
+                  <input
+                    autoFocus
+                    value={manualTitle}
+                    onChange={(event) => setManualTitle(event.target.value)}
+                  />
+                </label>
+                <label>
+                  Reason
+                  <input
+                    value={manualReason}
+                    onChange={(event) => setManualReason(event.target.value)}
+                  />
+                </label>
+                <div>
+                  <button onClick={saveManualTask}>
+                    <CheckCircle2 size={16} />
+                    Save task
+                  </button>
+                  <button onClick={() => setShowManualForm(false)}>
+                    <RotateCcw size={16} />
+                    Cancel
+                  </button>
+                </div>
+              </section>
+            ) : null}
+
             <section className="summary-grid">
               <div className="panel urgent">
                 <CloudRain />

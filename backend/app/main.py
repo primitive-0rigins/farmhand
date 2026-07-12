@@ -23,9 +23,19 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def slug(value: str) -> str:
+    normalized = [character.lower() if character.isalnum() else "-" for character in value]
+    return "-".join(part for part in "".join(normalized).split("-") if part)
+
+
+def task_id(task: GeneratedTask) -> str:
+    source = task.source_rule or slug(task.title)
+    return f"{task.due_date.isoformat()}-{source}-{slug(task.title)}"
+
+
 def serialize_task(task: GeneratedTask) -> dict[str, object]:
     return {
-        "id": task.source_rule or task.title.lower().replace(" ", "-"),
+        "id": task_id(task),
         "title": task.title,
         "due_date": task.due_date.isoformat(),
         "severity": task.severity.value,
