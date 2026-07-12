@@ -211,6 +211,26 @@ def generate_daily_tasks(
                     source_rule="warm_season_harvest_window",
                 )
             )
+        if today.month == last_frost - 1:
+            tasks.append(
+                GeneratedTask(
+                    title="Watch the forecast for a late spring frost.",
+                    due_date=today,
+                    severity=TaskSeverity.WATCH,
+                    reason=f"Zone {zone}'s last spring frost is about a month out, so start checking the nightly forecast and keep row cover ready before setting out tender crops.",
+                    source_rule="frost_watch_spring",
+                )
+            )
+        if today.month == first_frost - 1:
+            tasks.append(
+                GeneratedTask(
+                    title="Watch the forecast for the first fall frost.",
+                    due_date=today,
+                    severity=TaskSeverity.WATCH,
+                    reason=f"Zone {zone}'s first fall frost is about a month out, so start checking the nightly forecast and plan to protect or harvest tender crops.",
+                    source_rule="frost_watch_fall",
+                )
+            )
 
     return sorted(tasks, key=_task_sort_key)
 

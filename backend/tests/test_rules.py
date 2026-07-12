@@ -222,6 +222,8 @@ def test_crop_timing_rules_skip_farms_without_warm_season_crops() -> None:
                 "warm_season_greenhouse_start",
                 "warm_season_transplant",
                 "warm_season_harvest_window",
+                "frost_watch_spring",
+                "frost_watch_fall",
             }
             for task in tasks
         )
@@ -286,9 +288,42 @@ def test_crop_timing_quiet_for_unmodeled_zone() -> None:
                 "warm_season_greenhouse_start",
                 "warm_season_transplant",
                 "warm_season_harvest_window",
+                "frost_watch_spring",
+                "frost_watch_fall",
             }
             for task in tasks
         )
+
+
+def test_spring_frost_watch_lands_the_month_before_last_frost() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato"],
+    )
+
+    march = generate_daily_tasks(
+        farm, WeatherForecast(forecast_date=date(2026, 3, 15)), today=date(2026, 3, 15)
+    )
+    watch = next(task for task in march if task.source_rule == "frost_watch_spring")
+    assert watch.severity == TaskSeverity.WATCH
+
+
+def test_fall_frost_watch_lands_the_month_before_first_frost() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["pepper"],
+    )
+
+    october = generate_daily_tasks(
+        farm, WeatherForecast(forecast_date=date(2026, 10, 15)), today=date(2026, 10, 15)
+    )
+    assert any(task.source_rule == "frost_watch_fall" for task in october)
 
 
 def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
