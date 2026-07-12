@@ -227,6 +227,70 @@ def test_crop_timing_rules_skip_farms_without_warm_season_crops() -> None:
         )
 
 
+def test_zone_calendar_does_not_duplicate_crop_timing_tasks() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato", "pepper"],
+    )
+
+    for today in (date(2026, 2, 15), date(2026, 4, 15)):
+        forecast = WeatherForecast(forecast_date=today)
+        tasks = generate_daily_tasks(farm, forecast, today=today)
+        timing_tasks = [
+            task
+            for task in tasks
+            if "seedling" in task.title.lower() or "transplant" in task.title.lower()
+        ]
+        assert len(timing_tasks) == 1
+        assert timing_tasks[0].source_rule.startswith("warm_season_")
+
+
+def test_crop_timing_shifts_with_planting_zone() -> None:
+    cold = FarmProfile(
+        name="North Farm",
+        city="Duluth",
+        state="MN",
+        planting_zone="3",
+        crops=["tomato"],
+    )
+
+    april = generate_daily_tasks(
+        cold, WeatherForecast(forecast_date=date(2026, 4, 20)), today=date(2026, 4, 20)
+    )
+    assert not any(task.source_rule == "warm_season_transplant" for task in april)
+
+    may = generate_daily_tasks(
+        cold, WeatherForecast(forecast_date=date(2026, 5, 20)), today=date(2026, 5, 20)
+    )
+    assert any(task.source_rule == "warm_season_transplant" for task in may)
+
+
+def test_crop_timing_quiet_for_unmodeled_zone() -> None:
+    farm = FarmProfile(
+        name="Gulf Farm",
+        city="Miami",
+        state="FL",
+        planting_zone="10b",
+        crops=["tomato", "pepper"],
+    )
+
+    for today in (date(2026, 2, 15), date(2026, 4, 15), date(2026, 7, 15)):
+        forecast = WeatherForecast(forecast_date=today)
+        tasks = generate_daily_tasks(farm, forecast, today=today)
+        assert not any(
+            task.source_rule
+            in {
+                "warm_season_greenhouse_start",
+                "warm_season_transplant",
+                "warm_season_harvest_window",
+            }
+            for task in tasks
+        )
+
+
 def test_generated_tasks_are_sorted_for_today_dashboard() -> None:
     farm = FarmProfile(
         name="Demo Farm",

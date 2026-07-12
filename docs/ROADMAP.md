@@ -46,6 +46,12 @@
 - [x] Harvest windows
 - [ ] Succession planting reminders
 
+> Crop timing (start, transplant, harvest) is zone-anchored for USDA zones 3-8,
+> where a spring-transplant / summer-harvest pattern holds. The general monthly
+> calendar is still zone 8b only, and zones 9+ (winter growing season) are left
+> unscheduled on purpose until a dedicated model exists, rather than given
+> confidently wrong dates.
+
 ## Phase 5 - Pest And Disease Pressure
 
 - [ ] Rule tables for common crops and pests

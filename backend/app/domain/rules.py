@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import date, timedelta
 
 from app.domain.models import FarmProfile, GeneratedTask, Playbook, TaskSeverity, WeatherForecast
@@ -34,12 +35,12 @@ DEFAULT_PLAYBOOKS = {
 
 
 ZONE_8B_SEASONAL_TASKS = {
-    1: ["Review seed inventory and greenhouse start plan."],
-    2: ["Start warm-season seedlings under protection."],
+    1: ["Review seed inventory and plan the growing season."],
+    2: ["Service tools and turn compost before the season ramps up."],
     3: ["Prepare beds and harden off early transplants."],
-    4: ["Transplant warm-season crops when frost risk passes."],
-    5: ["Scout tomatoes and cucurbits twice weekly."],
-    6: ["Scout for tomato hornworms and early blight pressure."],
+    4: ["Mulch beds and set up trellises as the season warms."],
+    5: ["Stay ahead of weeds and keep beds mulched."],
+    6: ["Keep beds mulched and watch soil moisture as heat builds."],
     7: ["Monitor heat stress and keep irrigation consistent."],
     8: ["Plan fall crop starts and watch pest pressure."],
     9: ["Start fall greens and prepare row cover."],
@@ -50,6 +51,22 @@ ZONE_8B_SEASONAL_TASKS = {
 
 
 WARM_SEASON_CROPS = frozenset({"tomato", "pepper"})
+
+
+# Approximate USDA hardiness-zone frost anchors: (month of average last spring
+# frost, month of average first fall frost). Coarse and month-granular on
+# purpose. Only temperate zones 3-8 are modeled, where a spring-transplant /
+# summer-harvest pattern holds. Warmer zones (9+) invert this into a winter
+# growing season and are left to a future model rather than given confidently
+# wrong advice.
+ZONE_FROST = {
+    3: (5, 9),
+    4: (5, 9),
+    5: (5, 10),
+    6: (4, 10),
+    7: (4, 11),
+    8: (4, 11),
+}
 
 
 SEVERITY_ORDER = {
@@ -65,6 +82,11 @@ def _task_sort_key(task: GeneratedTask) -> tuple[int, date, str]:
 
 def _warm_season_crops(farm: FarmProfile) -> list[str]:
     return sorted({crop.lower() for crop in farm.crops} & WARM_SEASON_CROPS)
+
+
+def _zone_number(planting_zone: str) -> int | None:
+    match = re.match(r"\s*(\d+)", planting_zone)
+    return int(match.group(1)) if match else None
 
 
 def generate_daily_tasks(
@@ -153,35 +175,39 @@ def generate_daily_tasks(
         )
 
     warm_season = _warm_season_crops(farm)
-    if warm_season:
+    zone_number = _zone_number(farm.planting_zone)
+    frost = ZONE_FROST.get(zone_number) if zone_number is not None else None
+    if warm_season and frost is not None:
+        last_frost, first_frost = frost
         crop_list = ", ".join(warm_season)
-        if today.month == 2:
+        zone = farm.planting_zone
+        if today.month == last_frost - 2:
             tasks.append(
                 GeneratedTask(
                     title="Start warm-season seedlings under cover.",
                     due_date=today,
                     severity=TaskSeverity.INFO,
-                    reason=f"Warm-season crops on this farm ({crop_list}) transplant in spring, so start seedlings under cover in late winter.",
+                    reason=f"Warm-season crops on this farm ({crop_list}) are usually started under cover ahead of zone {zone}'s last spring frost.",
                     source_rule="warm_season_greenhouse_start",
                 )
             )
-        if today.month == 4:
+        if today.month == last_frost:
             tasks.append(
                 GeneratedTask(
                     title="Transplant warm-season crops after the last frost.",
                     due_date=today,
                     severity=TaskSeverity.INFO,
-                    reason=f"Warm-season crops on this farm ({crop_list}) move outside once the last spring frost has passed.",
+                    reason=f"Zone {zone}'s last spring frost has typically passed, so warm-season crops on this farm ({crop_list}) can move outside.",
                     source_rule="warm_season_transplant",
                 )
             )
-        if today.month in {6, 7, 8, 9}:
+        if last_frost + 2 <= today.month <= first_frost:
             tasks.append(
                 GeneratedTask(
                     title="Harvest ripe warm-season crops.",
                     due_date=today,
                     severity=TaskSeverity.INFO,
-                    reason=f"Warm-season crops on this farm ({crop_list}) are in their summer harvest window, so pick ripe fruit regularly to keep plants producing.",
+                    reason=f"Warm-season crops on this farm ({crop_list}) are in their summer harvest window for zone {zone}, so pick ripe fruit regularly to keep plants producing.",
                     source_rule="warm_season_harvest_window",
                 )
             )
