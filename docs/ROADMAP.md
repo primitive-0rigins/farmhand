@@ -11,36 +11,36 @@
 
 ## Phase 1 - Farm Setup
 
-- [ ] Create farm profile
-- [ ] Capture city/state and planting zone
+- [x] Create demo farm profile
+- [x] Capture city/state and planting zone in demo data
 - [ ] Add growing spaces: field, greenhouse, high tunnel, orchard, pasture
-- [ ] Add assets: tractor, greenhouse, irrigation, row cover, cold storage
-- [ ] Add crop list
+- [x] Add demo assets: tractor, greenhouse, irrigation
+- [x] Add demo crop list
 - [ ] Store setup in Postgres
 
 ## Phase 2 - Daily Operating Calendar
 
-- [ ] Today view
-- [ ] This week view
-- [ ] Task completion and snooze
+- [x] Today view
+- [x] This week view
+- [x] Task completion and snooze
 - [ ] Manual task creation
-- [ ] Generated task reasons
-- [ ] Editable task templates
+- [x] Generated task reasons
+- [x] Session-local editable task templates
 
 ## Phase 3 - Weather Rules
 
 - [ ] NOAA/NWS weather adapter
-- [ ] Thunderstorm prep rules
-- [ ] Frost prep rules
-- [ ] Heat stress rules
-- [ ] High wind rules
-- [ ] Rain/irrigation rules
-- [ ] Farmer-customized alert playbooks
+- [x] Thunderstorm prep rules
+- [x] Frost prep rules
+- [x] Heat stress rules
+- [x] High wind rules
+- [x] Rain/irrigation rules
+- [x] Session-local farmer-customized alert playbooks
 
 ## Phase 4 - Crop And Zone Rules
 
-- [ ] Zone-aware planting windows
-- [ ] Crop-specific scouting windows
+- [x] Zone-aware monthly calendar seed
+- [x] Crop-specific scouting windows
 - [ ] Greenhouse start reminders
 - [ ] Transplant reminders
 - [ ] Harvest windows
@@ -52,8 +52,8 @@
 - [ ] Regional observation model
 - [ ] Neighboring county/state signal ingestion
 - [ ] Pest arrival estimates
-- [ ] Disease pressure estimates from humidity/rain/temperature
-- [ ] Scout-now alerts with explainable reasons
+- [x] Disease pressure estimates from rain
+- [x] Scout-now alerts with explainable reasons
 
 ## Phase 6 - Commercial Readiness
 
