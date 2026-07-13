@@ -200,6 +200,34 @@ def test_task_status_persists_for_a_farm(db) -> None:
     assert next(task for task in refreshed["tasks"] if task["id"] == task_id)["status"] == "completed"
 
 
+def test_farmer_can_remove_their_setup_records(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        asset = client.post(f"/farms/{farm['id']}/assets", headers=headers, json={"name": "Drip", "kind": "irrigation"}).json()
+        space = client.post(f"/farms/{farm['id']}/spaces", headers=headers, json={"name": "North field", "kind": "field"}).json()
+        planting = client.post(f"/farms/{farm['id']}/plantings", headers=headers, json={"crop": "lettuce", "planted_on": "2026-04-01"}).json()
+        responses = [
+            client.delete(f"/farms/{farm['id']}/assets/{asset['id']}", headers=headers),
+            client.delete(f"/farms/{farm['id']}/spaces/{space['id']}", headers=headers),
+            client.delete(f"/farms/{farm['id']}/plantings/{planting['id']}", headers=headers),
+        ]
+        stored = client.get(f"/farms/{farm['id']}", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert [response.status_code for response in responses] == [204, 204, 204]
+    assert stored["assets"] == []
+    assert stored["spaces"] == []
+    assert stored["plantings"] == []
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
