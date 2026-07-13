@@ -122,3 +122,15 @@ Use `.env.example` as the public-safe template.
 The included `docker-compose.yml` is a local Postgres convenience, not a
 production deployment definition. Its credentials are intentionally public and
 must be replaced by managed database credentials in every deployed environment.
+
+## Container Demo
+
+Run the complete local stack with Docker:
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:8080`; the API is available on `http://localhost:8000`.
+The backend container applies Alembic migrations before starting. The compose
+credentials are local-demo-only and must never be deployed.

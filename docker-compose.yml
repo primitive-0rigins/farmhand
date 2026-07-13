@@ -10,5 +10,22 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  backend:
+    build: ./backend
+    environment:
+      FARMHAND_DATABASE_URL: postgresql+psycopg://farmhand:farmhand@postgres:5432/farmhand
+      FARMHAND_ALLOWED_ORIGINS: http://localhost:8080
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
 volumes:
   postgres-data:
