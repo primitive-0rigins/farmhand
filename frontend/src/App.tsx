@@ -23,6 +23,7 @@ type TodayTask = {
   reason: string;
   steps: string[];
   source_rule: string | null;
+  status: "open" | "completed" | "snoozed";
 };
 
 type WeekDayPlan = {
@@ -152,6 +153,12 @@ function App() {
       .then(setToday)
       .catch((caught: Error) => setError(caught.message));
   }, [farmId, sessionToken]);
+
+  useEffect(() => {
+    if (!today) return;
+    setDoneTasks(new Set(today.tasks.filter((task) => task.status === "completed").map((task) => task.id)));
+    setSnoozedTasks(new Set(today.tasks.filter((task) => task.status === "snoozed").map((task) => task.id)));
+  }, [today]);
 
   useEffect(() => {
     if (!sessionToken || !farmId) {
@@ -303,6 +310,27 @@ function App() {
     });
   }
 
+  async function setTaskStatus(task: TodayTask, status: "open" | "completed" | "snoozed") {
+    if (status === "completed") {
+      setDoneTasks((current) => new Set(current).add(task.id));
+      setSnoozedTasks((current) => { const next = new Set(current); next.delete(task.id); return next; });
+    } else if (status === "snoozed") {
+      setSnoozedTasks((current) => new Set(current).add(task.id));
+      setDoneTasks((current) => { const next = new Set(current); next.delete(task.id); return next; });
+    } else {
+      setDoneTasks((current) => { const next = new Set(current); next.delete(task.id); return next; });
+      setSnoozedTasks((current) => { const next = new Set(current); next.delete(task.id); return next; });
+    }
+    if (sessionToken && farmId) {
+      const response = await fetch(`${API_BASE}/farms/${farmId}/tasks/${encodeURIComponent(task.id)}/status`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) setError("Could not save this task status.");
+    }
+  }
+
   function startEdit(task: TodayTask) {
     setEditingTaskId(task.id);
     setDraftTitle(task.title);
@@ -365,6 +393,7 @@ function App() {
         reason,
         steps: [],
         source_rule: null,
+        status: "open",
       },
     ]);
     setManualTitle("");
@@ -631,11 +660,11 @@ function App() {
                             </>
                           ) : (
                             <>
-                              <button onClick={() => toggleSet(setDoneTasks, task.id)}>
+                              <button onClick={() => setTaskStatus(task, "completed")}>
                                 <CheckCircle2 size={16} />
                                 Done
                               </button>
-                              <button onClick={() => toggleSet(setSnoozedTasks, task.id)}>
+                              <button onClick={() => setTaskStatus(task, "snoozed")}>
                                 <Clock3 size={16} />
                                 Snooze
                               </button>
@@ -682,7 +711,7 @@ function App() {
                       <button
                         className="review-item"
                         key={task.id}
-                        onClick={() => toggleSet(setDoneTasks, task.id)}
+                        onClick={() => setTaskStatus(task, "open")}
                       >
                         <CheckCircle2 size={16} />
                         <span>{task.title}</span>
@@ -698,7 +727,7 @@ function App() {
                       <button
                         className="review-item"
                         key={task.id}
-                        onClick={() => toggleSet(setSnoozedTasks, task.id)}
+                        onClick={() => setTaskStatus(task, "open")}
                       >
                         <Clock3 size={16} />
                         <span>{task.title}</span>
