@@ -220,6 +220,36 @@ nav button:disabled:hover {
   padding-left: 20px;
 }
 
+.setup-actions,
+.setup-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.setup-form {
+  align-items: end;
+}
+
+.setup-form label {
+  color: #48544b;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.setup-form input,
+.setup-form select {
+  background: #fffdfa;
+  border: 1px solid #d8d1c2;
+  border-radius: 6px;
+  color: #26352b;
+  font: inherit;
+  padding: 8px 9px;
+}
+
 .farm-form button {
   background: #2f6b45;
   border: 0;

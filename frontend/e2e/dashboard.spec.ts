@@ -65,3 +65,25 @@ test("farmer can correct a saved planting", async ({ page }) => {
   await setup.getByRole("button", { name: "Save" }).click();
   await expect(setup.getByText("every 14 days")).toBeVisible();
 });
+
+test("farmer can add equipment from farm setup", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("farmhand-session-token", "session-token");
+    localStorage.setItem("farmhand-farm-id", "7");
+  });
+  await page.route("**/farms/7/assets", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON()).toEqual({ name: "West drip", kind: "irrigation" });
+    await route.fulfill({ json: { id: 4, name: "West drip", kind: "irrigation" } });
+  });
+  await page.route("**/farms/7/today", (route) => route.fulfill({ json: { farm: { name: "South Field", city: "Greenville", state: "SC", planting_zone: "8b" }, today: "2026-06-26", forecast: { date: "2026-06-27", summary: "Storms tomorrow", thunderstorm_risk: true, high_wind_mph: 34, heat_index_f: 91 }, tasks: [], week: [] } }));
+  await page.route("**/farms/7", (route) => route.fulfill({ json: { playbooks: [], assets: [], spaces: [], plantings: [] } }));
+  await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Manage setup" }).click();
+  await page.getByRole("button", { name: "Add equipment" }).click();
+  const form = page.getByLabel("Add equipment");
+  await form.getByLabel("Name").fill("West drip");
+  await form.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("West drip (irrigation)")).toBeVisible();
+});

@@ -134,6 +134,9 @@ function App() {
   const [farmDetails, setFarmDetails] = useState<FarmDetails | null>(null);
   const [showSetup, setShowSetup] = useState(false);
   const [editingSetup, setEditingSetup] = useState<{ kind: SetupKind; record: SetupRecord } | null>(null);
+  const [addingSetup, setAddingSetup] = useState<"assets" | "spaces" | null>(null);
+  const [setupName, setSetupName] = useState("");
+  const [setupKind, setSetupKind] = useState("irrigation");
 
   function clearSession(message: string) {
     localStorage.removeItem("farmhand-session-token");
@@ -351,6 +354,23 @@ function App() {
     const saved = (await response.json()) as SetupRecord;
     setFarmDetails((current) => current ? { ...current, [kind]: current[kind].map((item) => item.id === saved.id ? saved : item) } : current);
     setEditingSetup(null);
+  }
+
+  async function addSetupRecord() {
+    if (!sessionToken || !farmId || !addingSetup) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}/${addingSetup}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: setupName, kind: setupKind }),
+    });
+    if (!response.ok) {
+      setError("Enter a name and valid type for this setup record.");
+      return;
+    }
+    const saved = (await response.json()) as SetupRecord;
+    setFarmDetails((current) => current ? { ...current, [addingSetup]: [...current[addingSetup], saved] } : current);
+    setSetupName("");
+    setAddingSetup(null);
   }
 
   async function exportFarm() {
@@ -622,6 +642,14 @@ function App() {
         {showSetup && farmDetails ? (
           <section className="playbooks-panel" aria-label="Farm setup">
             <h2>Farm setup</h2>
+            {addingSetup ? (
+              <div className="setup-form" aria-label={`Add ${addingSetup === "assets" ? "equipment" : "growing space"}`}>
+                <label>Name<input autoFocus value={setupName} onChange={(event) => setSetupName(event.target.value)} placeholder={addingSetup === "assets" ? "Drip irrigation" : "North field"} /></label>
+                <label>Type{addingSetup === "assets" ? <input value={setupKind} onChange={(event) => setSetupKind(event.target.value)} placeholder="irrigation" /> : <select value={setupKind} onChange={(event) => setSetupKind(event.target.value)}><option value="field">Field</option><option value="greenhouse">Greenhouse</option><option value="high_tunnel">High tunnel</option><option value="orchard">Orchard</option><option value="pasture">Pasture</option></select>}</label>
+                <button onClick={addSetupRecord}>Save</button>
+                <button onClick={() => setAddingSetup(null)}>Cancel</button>
+              </div>
+            ) : <div className="setup-actions"><button onClick={() => { setSetupKind("irrigation"); setAddingSetup("assets"); }}>Add equipment</button><button onClick={() => { setSetupKind("field"); setAddingSetup("spaces"); }}>Add growing space</button></div>}
             {(["assets", "spaces", "plantings"] as const).map((kind) => <div key={kind}>
               <strong>{kind === "assets" ? "Equipment" : kind === "spaces" ? "Growing spaces" : "Plantings"}</strong>
               {farmDetails[kind].length ? farmDetails[kind].map((record) => <article key={record.id}>
