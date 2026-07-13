@@ -12,7 +12,7 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
-from app.farms import add_asset, add_growing_space, add_planting, add_manual_task, delete_asset, delete_growing_space, delete_manual_task, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
+from app.farms import add_asset, add_growing_space, add_planting, add_manual_task, delete_asset, delete_growing_space, delete_manual_task, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_farm, update_growing_space, update_planting
 from app.geocode import CompositeGeocoder, Coordinates, Geocoder, OpenMeteoGeocoder, StaticGeocoder, ZippopotamGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmManualTask, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
@@ -320,6 +320,30 @@ def create_farm_route(
         crops=body.crops,
     )
     return _farm_response(farm)
+
+
+@app.put("/farms/{farm_id}", response_model=FarmResponse)
+def update_farm_route(
+    farm_id: int,
+    body: FarmCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _farm_response(
+        update_farm(
+            session,
+            farm,
+            name=body.name,
+            city=body.city,
+            state=body.state,
+            planting_zone=body.planting_zone,
+            crops=body.crops,
+        )
+    )
 
 
 @app.get("/farms", response_model=list[FarmResponse])

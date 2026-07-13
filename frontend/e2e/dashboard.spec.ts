@@ -58,7 +58,7 @@ test("farmer can correct a saved planting", async ({ page }) => {
   await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
   await page.goto("/");
   await page.getByRole("button", { name: "Manage setup" }).click();
-  await page.getByRole("button", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
   const setup = page.getByLabel("Farm setup");
   await setup.getByLabel("Planted on").fill("2026-04-05");
   await setup.getByLabel("Succession interval (days)").fill("14");
@@ -123,4 +123,31 @@ test("farmer can remove a saved manual task", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Remove" }).click();
   await expect(page.getByText("Today is clear.")).toBeVisible();
+});
+
+test("farmer can correct farm profile details", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("farmhand-session-token", "session-token");
+    localStorage.setItem("farmhand-farm-id", "7");
+  });
+  await page.route("**/farms/7", async (route) => {
+    if (route.request().method() === "PUT") {
+      expect(route.request().postDataJSON()).toEqual({ name: "North Field", city: "Asheville", state: "NC", planting_zone: "7a", crops: ["tomato", "pepper"] });
+      return route.fulfill({ json: { id: 7, name: "North Field", city: "Asheville", state: "NC", planting_zone: "7a", crops: ["tomato", "pepper"], playbooks: [], assets: [], spaces: [], plantings: [] } });
+    }
+    return route.fulfill({ json: { id: 7, name: "South Field", city: "Greenville", state: "SC", planting_zone: "8b", crops: ["tomato"], playbooks: [], assets: [], spaces: [], plantings: [] } });
+  });
+  await page.route("**/farms/7/today", (route) => route.fulfill({ json: { farm: { name: "North Field", city: "Asheville", state: "NC", planting_zone: "7a" }, today: "2026-06-26", forecast: { date: "2026-06-27", summary: "Storms tomorrow", thunderstorm_risk: true, high_wind_mph: 34, heat_index_f: 91 }, tasks: [], week: [] } }));
+  await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Manage setup" }).click();
+  await page.getByRole("button", { name: "Edit farm details" }).click();
+  const form = page.getByLabel("Edit farm details");
+  await form.getByLabel("Farm name").fill("North Field");
+  await form.getByLabel("City").fill("Asheville");
+  await form.getByLabel("State").fill("NC");
+  await form.getByLabel("Planting zone").fill("7a");
+  await form.getByLabel("Crops").fill("tomato, pepper");
+  await form.getByRole("button", { name: "Save farm details" }).click();
+  await expect(page.getByLabel("Choose farm")).toContainText("North Field");
 });

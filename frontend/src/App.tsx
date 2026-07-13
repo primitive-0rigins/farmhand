@@ -72,7 +72,7 @@ type SavedPlaybook = {
 };
 
 type SetupRecord = { id: number; name?: string; crop?: string; kind?: string; planted_on?: string; succession_interval_days?: number | null };
-type FarmDetails = { playbooks: SavedPlaybook[]; assets: SetupRecord[]; spaces: SetupRecord[]; plantings: SetupRecord[] };
+type FarmDetails = { id: number; name: string; city: string; state: string; planting_zone: string; crops: string[]; playbooks: SavedPlaybook[]; assets: SetupRecord[]; spaces: SetupRecord[]; plantings: SetupRecord[] };
 type SetupKind = "assets" | "spaces" | "plantings";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -138,6 +138,12 @@ function App() {
   const [addingSetup, setAddingSetup] = useState<"assets" | "spaces" | null>(null);
   const [setupName, setSetupName] = useState("");
   const [setupKind, setSetupKind] = useState("irrigation");
+  const [editingFarm, setEditingFarm] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileCity, setProfileCity] = useState("");
+  const [profileState, setProfileState] = useState("");
+  const [profileZone, setProfileZone] = useState("");
+  const [profileCrops, setProfileCrops] = useState("");
 
   function clearSession(message: string) {
     localStorage.removeItem("farmhand-session-token");
@@ -372,6 +378,41 @@ function App() {
     setFarmDetails((current) => current ? { ...current, [addingSetup]: [...current[addingSetup], saved] } : current);
     setSetupName("");
     setAddingSetup(null);
+  }
+
+  function startFarmEdit() {
+    if (!farmDetails) return;
+    setProfileName(farmDetails.name);
+    setProfileCity(farmDetails.city);
+    setProfileState(farmDetails.state);
+    setProfileZone(farmDetails.planting_zone);
+    setProfileCrops(farmDetails.crops.join(", "));
+    setEditingFarm(true);
+  }
+
+  async function saveFarmProfile() {
+    if (!sessionToken || !farmId) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: profileName,
+        city: profileCity,
+        state: profileState,
+        planting_zone: profileZone,
+        crops: profileCrops.split(",").map((crop) => crop.trim()).filter(Boolean),
+      }),
+    });
+    if (!response.ok) {
+      setError("Enter a farm name, city, state, and planting zone.");
+      return;
+    }
+    const saved = (await response.json()) as FarmDetails;
+    setFarmDetails(saved);
+    setFarms((current) => current.map((farm) => farm.id === saved.id ? { ...farm, name: saved.name } : farm));
+    const refreshed = await fetch(`${API_BASE}/farms/${farmId}/today`, { headers: { Authorization: `Bearer ${sessionToken}` } });
+    if (refreshed.ok) setToday(await refreshed.json() as TodayResponse);
+    setEditingFarm(false);
   }
 
   async function exportFarm() {
@@ -671,6 +712,15 @@ function App() {
         {showSetup && farmDetails ? (
           <section className="playbooks-panel" aria-label="Farm setup">
             <h2>Farm setup</h2>
+            {editingFarm ? <div className="setup-form" aria-label="Edit farm details">
+              <label>Farm name<input value={profileName} onChange={(event) => setProfileName(event.target.value)} /></label>
+              <label>City<input value={profileCity} onChange={(event) => setProfileCity(event.target.value)} /></label>
+              <label>State<input value={profileState} onChange={(event) => setProfileState(event.target.value)} /></label>
+              <label>Planting zone<input value={profileZone} onChange={(event) => setProfileZone(event.target.value)} /></label>
+              <label>Crops<input value={profileCrops} onChange={(event) => setProfileCrops(event.target.value)} placeholder="tomato, pepper" /></label>
+              <button onClick={saveFarmProfile}>Save farm details</button>
+              <button onClick={() => setEditingFarm(false)}>Cancel</button>
+            </div> : <div className="setup-actions"><button onClick={startFarmEdit}>Edit farm details</button></div>}
             {addingSetup ? (
               <div className="setup-form" aria-label={`Add ${addingSetup === "assets" ? "equipment" : "growing space"}`}>
                 <label>Name<input autoFocus value={setupName} onChange={(event) => setSetupName(event.target.value)} placeholder={addingSetup === "assets" ? "Drip irrigation" : "North field"} /></label>

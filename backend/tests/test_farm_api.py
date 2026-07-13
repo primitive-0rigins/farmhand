@@ -57,6 +57,30 @@ def test_farmer_can_create_list_and_plan_for_their_farm(db) -> None:
     )
 
 
+def test_farmer_can_update_their_farm_profile(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        updated = client.put(
+            f"/farms/{farm['id']}",
+            headers=headers,
+            json={"name": "North Field", "city": "Asheville", "state": "NC", "planting_zone": "7a", "crops": [" Tomato ", "pepper"]},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "North Field"
+    assert updated.json()["city"] == "Asheville"
+    assert updated.json()["crops"] == ["tomato", "pepper"]
+
+
 def test_recorded_assets_change_the_farm_plan(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:

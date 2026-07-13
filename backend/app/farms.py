@@ -38,6 +38,26 @@ def create_farm(
     return farm
 
 
+def update_farm(
+    session: Session,
+    farm: Farm,
+    *,
+    name: str,
+    city: str,
+    state: str,
+    planting_zone: str,
+    crops: Sequence[str],
+) -> Farm:
+    farm.name = name
+    farm.city = city
+    farm.state = state
+    farm.planting_zone = planting_zone
+    farm.crops = list(crops)
+    session.commit()
+    session.refresh(farm)
+    return farm
+
+
 def list_farms(session: Session, user: User) -> list[Farm]:
     return list(
         session.scalars(
