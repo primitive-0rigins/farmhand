@@ -108,6 +108,7 @@ function App() {
   const [farmCity, setFarmCity] = useState("");
   const [farmState, setFarmState] = useState("");
   const [farmZone, setFarmZone] = useState("");
+  const [farmCrops, setFarmCrops] = useState("");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -180,7 +181,7 @@ function App() {
         city: farmCity,
         state: farmState,
         planting_zone: farmZone,
-        crops: [],
+        crops: farmCrops.split(",").map((crop) => crop.trim()).filter(Boolean),
       }),
     });
     if (!response.ok) {
@@ -374,6 +375,7 @@ function App() {
             <label>City<input value={farmCity} onChange={(event) => setFarmCity(event.target.value)} /></label>
             <label>State<input value={farmState} onChange={(event) => setFarmState(event.target.value)} /></label>
             <label>Planting zone<input value={farmZone} onChange={(event) => setFarmZone(event.target.value)} placeholder="8b" /></label>
+            <label>Crops<input value={farmCrops} onChange={(event) => setFarmCrops(event.target.value)} placeholder="tomato, pepper" /></label>
             <button onClick={createFarm}>Save farm</button>
           </section>
         ) : null}
