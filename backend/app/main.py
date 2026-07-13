@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
 from app.config import dev_auth_enabled, get_allowed_origins
-from app.db import get_session, init_db
+from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
@@ -48,7 +48,6 @@ weather_provider: WeatherProvider = DemoWeatherProvider()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
     yield
 
 
