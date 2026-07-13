@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.models import FarmAsset, FarmProfile
-from app.orm import Farm, FarmAssetRecord, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, GrowingSpace, User
 
 
 class FarmNotFound(Exception):
@@ -71,6 +72,14 @@ def add_growing_space(session: Session, farm: Farm, *, name: str, kind: str) -> 
     session.commit()
     session.refresh(space)
     return space
+
+
+def add_planting(session: Session, farm: Farm, *, crop: str, planted_on: date) -> CropPlanting:
+    planting = CropPlanting(farm_id=farm.id, crop=crop, planted_on=planted_on)
+    session.add(planting)
+    session.commit()
+    session.refresh(planting)
+    return planting
 
 
 def farm_profile(farm: Farm) -> FarmProfile:

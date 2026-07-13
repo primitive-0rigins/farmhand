@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -102,6 +103,7 @@ class FarmResponse(BaseModel):
     crops: list[str]
     assets: list["FarmAssetResponse"]
     spaces: list["GrowingSpaceResponse"]
+    plantings: list["CropPlantingResponse"]
 
 
 class FarmAssetCreate(BaseModel):
@@ -148,3 +150,22 @@ class GrowingSpaceResponse(BaseModel):
     id: int
     name: str
     kind: str
+
+
+class CropPlantingCreate(BaseModel):
+    crop: str
+    planted_on: date
+
+    @field_validator("crop")
+    @classmethod
+    def normalized_crop(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+
+class CropPlantingResponse(BaseModel):
+    id: int
+    crop: str
+    planted_on: date

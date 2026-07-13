@@ -12,14 +12,16 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
-from app.farms import add_asset, add_growing_space, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
+from app.farms import add_asset, add_growing_space, add_planting, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
-from app.orm import Farm, FarmAssetRecord, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, GrowingSpace, User
 from app.schemas import (
     FarmCreate,
     FarmAssetCreate,
     FarmAssetResponse,
     FarmResponse,
+    CropPlantingCreate,
+    CropPlantingResponse,
     FarmSummary,
     ForecastSummary,
     GrowingSpaceCreate,
@@ -226,6 +228,7 @@ def _farm_response(farm: Farm) -> FarmResponse:
         crops=list(farm.crops),
         assets=[_asset_response(asset) for asset in farm.assets],
         spaces=[_space_response(space) for space in farm.spaces],
+        plantings=[_planting_response(planting) for planting in farm.plantings],
     )
 
 
@@ -235,6 +238,12 @@ def _asset_response(asset: FarmAssetRecord) -> FarmAssetResponse:
 
 def _space_response(space: GrowingSpace) -> GrowingSpaceResponse:
     return GrowingSpaceResponse(id=space.id, name=space.name, kind=space.kind)
+
+
+def _planting_response(planting: CropPlanting) -> CropPlantingResponse:
+    return CropPlantingResponse(
+        id=planting.id, crop=planting.crop, planted_on=planting.planted_on
+    )
 
 
 @app.post("/farms", response_model=FarmResponse, status_code=201)
@@ -302,6 +311,20 @@ def add_growing_space_route(
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
     return _space_response(add_growing_space(session, farm, name=body.name, kind=body.kind))
+
+
+@app.post("/farms/{farm_id}/plantings", response_model=CropPlantingResponse, status_code=201)
+def add_planting_route(
+    farm_id: int,
+    body: CropPlantingCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> CropPlantingResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _planting_response(add_planting(session, farm, crop=body.crop, planted_on=body.planted_on))
 
 
 @app.get("/farms/{farm_id}/today", response_model=TodayResponse)

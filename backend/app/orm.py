@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String
+from sqlalchemy import Date, DateTime, ForeignKey, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -61,6 +61,9 @@ class Farm(Base):
     spaces: Mapped[list["GrowingSpace"]] = relationship(
         back_populates="farm", cascade="all, delete-orphan"
     )
+    plantings: Mapped[list["CropPlanting"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
 
 
 class FarmAssetRecord(Base):
@@ -83,3 +86,14 @@ class GrowingSpace(Base):
     kind: Mapped[str] = mapped_column(String(60))
 
     farm: Mapped[Farm] = relationship(back_populates="spaces")
+
+
+class CropPlanting(Base):
+    __tablename__ = "crop_plantings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    crop: Mapped[str] = mapped_column(String(120))
+    planted_on: Mapped[date] = mapped_column(Date)
+
+    farm: Mapped[Farm] = relationship(back_populates="plantings")

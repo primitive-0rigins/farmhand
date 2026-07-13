@@ -187,4 +187,5 @@ def test_farm_creation_rejects_blank_fields_and_normalizes_crops(db) -> None:
         "crops": ["tomato", "pepper"],
         "assets": [],
         "spaces": [],
+        "plantings": [],
     }
