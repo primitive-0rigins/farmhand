@@ -331,6 +331,23 @@ function App() {
     setFarmDetails((current) => current ? { ...current, [kind]: current[kind].filter((record) => record.id !== id) } : current);
   }
 
+  async function exportFarm() {
+    if (!sessionToken || !farmId) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}/export`, {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
+    if (!response.ok) {
+      setError("Could not export this farm.");
+      return;
+    }
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `farmhand-farm-${farmId}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function savePlaybookFromLibrary() {
     if (!editingPlaybook || !sessionToken || !farmId) return;
     const response = await fetch(`${API_BASE}/farms/${farmId}/playbooks`, {
@@ -539,6 +556,7 @@ function App() {
               {farms.length === 0 ? <button onClick={() => setShowFarmForm(true)}>Create your first farm</button> : null}
               {farmId ? <button onClick={() => setShowPlantingForm(true)}>Record planting</button> : null}
               {farmId ? <button onClick={() => setShowSetup((current) => !current)}>Manage setup</button> : null}
+              {farmId ? <button onClick={exportFarm}>Export farm</button> : null}
               <button onClick={signOut}>Sign out</button>
             </>
           ) : (
