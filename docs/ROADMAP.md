@@ -16,7 +16,7 @@
 - [ ] Add growing spaces: field, greenhouse, high tunnel, orchard, pasture
 - [x] Add demo assets: tractor, greenhouse, irrigation
 - [x] Add demo crop list
-- [ ] Store setup in Postgres
+- [x] Store setup in Postgres
 
 ## Phase 2 - Daily Operating Calendar
 
