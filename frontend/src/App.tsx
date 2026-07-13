@@ -167,18 +167,26 @@ function App() {
       return;
     }
     fetch(`${API_BASE}/farms/${farmId}`, { headers: { Authorization: `Bearer ${sessionToken}` } })
-      .then((response) => response.json() as Promise<{ playbooks: SavedPlaybook[] }>)
-      .then((farm) => setPlaybooks(farm.playbooks));
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load saved playbooks for this farm.");
+        return response.json() as Promise<{ playbooks: SavedPlaybook[] }>;
+      })
+      .then((farm) => setPlaybooks(farm.playbooks))
+      .catch((caught: Error) => setError(caught.message));
   }, [farmId, sessionToken]);
 
   useEffect(() => {
     if (!sessionToken) return;
     fetch(`${API_BASE}/farms`, { headers: { Authorization: `Bearer ${sessionToken}` } })
-      .then((response) => response.json() as Promise<Farm[]>)
+      .then((response) => {
+        if (!response.ok) throw new Error("Your sign-in session has expired. Sign in again to use your farm.");
+        return response.json() as Promise<Farm[]>;
+      })
       .then((loaded) => {
         setFarms(loaded);
         if (!farmId && loaded[0]) setFarmId(loaded[0].id);
-      });
+      })
+      .catch((caught: Error) => setError(caught.message));
   }, [farmId, sessionToken]);
 
   async function signIn() {
