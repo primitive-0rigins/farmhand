@@ -132,6 +132,16 @@ function App() {
   const [editingPlaybook, setEditingPlaybook] = useState<SavedPlaybook | null>(null);
   const [farmDetails, setFarmDetails] = useState<FarmDetails | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+
+  function clearSession(message: string) {
+    localStorage.removeItem("farmhand-session-token");
+    localStorage.removeItem("farmhand-farm-id");
+    setSessionToken(null);
+    setFarmId(null);
+    setFarms([]);
+    setFarmDetails(null);
+    setAuthMessage(message);
+  }
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -206,7 +216,11 @@ function App() {
     if (!sessionToken) return;
     fetch(`${API_BASE}/farms`, { headers: { Authorization: `Bearer ${sessionToken}` } })
       .then((response) => {
-        if (!response.ok) throw new Error("Your sign-in session has expired. Sign in again to use your farm.");
+        if (response.status === 401) {
+          clearSession("Your sign-in session expired. Showing the public demo.");
+          throw new Error("Your sign-in session expired. Sign in again to use your farm.");
+        }
+        if (!response.ok) throw new Error("Could not load your farms.");
         return response.json() as Promise<Farm[]>;
       })
       .then((loaded) => {
@@ -301,13 +315,7 @@ function App() {
     if (sessionToken) {
       await fetch(`${API_BASE}/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${sessionToken}` } });
     }
-    localStorage.removeItem("farmhand-session-token");
-    localStorage.removeItem("farmhand-farm-id");
-    setSessionToken(null);
-    setFarmId(null);
-    setFarms([]);
-    setFarmDetails(null);
-    setAuthMessage("Signed out. Showing the public demo.");
+    clearSession("Signed out. Showing the public demo.");
   }
 
   async function removeSetupRecord(kind: "assets" | "spaces" | "plantings", id: number) {
