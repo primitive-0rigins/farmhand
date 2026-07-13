@@ -18,6 +18,13 @@ class FarmAsset:
 
 
 @dataclass(frozen=True)
+class CropPlanting:
+    crop: str
+    planted_on: date
+    succession_interval_days: int | None = None
+
+
+@dataclass(frozen=True)
 class FarmProfile:
     name: str
     city: str
@@ -25,6 +32,7 @@ class FarmProfile:
     planting_zone: str
     crops: list[str] = field(default_factory=list)
     assets: list[FarmAsset] = field(default_factory=list)
+    plantings: list[CropPlanting] = field(default_factory=list)
 
     def has_asset_kind(self, kind: str) -> bool:
         return any(asset.kind == kind for asset in self.assets)

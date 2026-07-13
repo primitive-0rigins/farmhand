@@ -157,6 +157,14 @@ class GrowingSpaceResponse(BaseModel):
 class CropPlantingCreate(BaseModel):
     crop: str
     planted_on: date
+    succession_interval_days: int | None = None
+
+    @field_validator("succession_interval_days")
+    @classmethod
+    def valid_interval(cls, value: int | None) -> int | None:
+        if value is not None and value < 1:
+            raise ValueError("must be at least one day")
+        return value
 
     @field_validator("crop")
     @classmethod
@@ -171,6 +179,7 @@ class CropPlantingResponse(BaseModel):
     id: int
     crop: str
     planted_on: date
+    succession_interval_days: int | None
 
 
 class FarmPlaybookCreate(BaseModel):

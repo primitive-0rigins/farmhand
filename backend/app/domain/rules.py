@@ -258,6 +258,23 @@ def generate_daily_tasks(
                 )
             )
 
+    for planting in farm.plantings:
+        interval = planting.succession_interval_days
+        elapsed_days = (today - planting.planted_on).days
+        if interval and elapsed_days > 0 and elapsed_days % interval == 0:
+            tasks.append(
+                GeneratedTask(
+                    title=f"Consider a succession planting of {planting.crop}.",
+                    due_date=today,
+                    severity=TaskSeverity.INFO,
+                    reason=(
+                        f"This farm records {planting.crop} planted on "
+                        f"{planting.planted_on:%b %d} with a {interval}-day succession interval."
+                    ),
+                    source_rule="configured_succession_planting",
+                )
+            )
+
     return sorted(tasks, key=_task_sort_key)
 
 

@@ -101,6 +101,7 @@ class CropPlanting(Base):
     farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
     crop: Mapped[str] = mapped_column(String(120))
     planted_on: Mapped[date] = mapped_column(Date)
+    succession_interval_days: Mapped[int | None] = mapped_column(default=None)
 
     farm: Mapped[Farm] = relationship(back_populates="plantings")
 

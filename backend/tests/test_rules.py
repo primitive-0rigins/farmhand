@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.domain.models import FarmAsset, FarmProfile, Playbook, TaskSeverity, WeatherForecast
+from app.domain.models import CropPlanting, FarmAsset, FarmProfile, Playbook, TaskSeverity, WeatherForecast
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 
 
@@ -68,6 +68,21 @@ def test_tomato_scouting_arrives_in_summer() -> None:
     tasks = generate_daily_tasks(farm, forecast, today=date(2026, 7, 1))
 
     assert any(task.source_rule == "tomato_summer_scouting" for task in tasks)
+
+
+def test_configured_succession_reminder_uses_the_farms_interval() -> None:
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        plantings=[CropPlanting(crop="lettuce", planted_on=date(2026, 4, 1), succession_interval_days=14)],
+    )
+    tasks = generate_daily_tasks(farm, WeatherForecast(forecast_date=date(2026, 4, 15)), today=date(2026, 4, 15))
+
+    reminder = next(task for task in tasks if task.source_rule == "configured_succession_planting")
+    assert "lettuce" in reminder.title
+    assert "14-day" in reminder.reason
 
 
 def test_heat_irrigation_rule_requires_heat_and_irrigation_asset() -> None:

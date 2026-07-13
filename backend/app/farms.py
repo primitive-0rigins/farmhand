@@ -6,7 +6,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.models import FarmAsset, FarmProfile, Playbook
+from app.domain.models import CropPlanting as DomainCropPlanting, FarmAsset, FarmProfile, Playbook
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, FarmTaskState, GrowingSpace, User
 
 
@@ -74,8 +74,8 @@ def add_growing_space(session: Session, farm: Farm, *, name: str, kind: str) -> 
     return space
 
 
-def add_planting(session: Session, farm: Farm, *, crop: str, planted_on: date) -> CropPlanting:
-    planting = CropPlanting(farm_id=farm.id, crop=crop, planted_on=planted_on)
+def add_planting(session: Session, farm: Farm, *, crop: str, planted_on: date, succession_interval_days: int | None) -> CropPlanting:
+    planting = CropPlanting(farm_id=farm.id, crop=crop, planted_on=planted_on, succession_interval_days=succession_interval_days)
     session.add(planting)
     session.commit()
     session.refresh(planting)
@@ -169,4 +169,5 @@ def farm_profile(farm: Farm) -> FarmProfile:
         planting_zone=farm.planting_zone,
         crops=list(farm.crops),
         assets=[FarmAsset(name=asset.name, kind=asset.kind) for asset in farm.assets],
+        plantings=[DomainCropPlanting(crop=planting.crop, planted_on=planting.planted_on, succession_interval_days=planting.succession_interval_days) for planting in farm.plantings],
     )

@@ -261,7 +261,8 @@ def _space_response(space: GrowingSpace) -> GrowingSpaceResponse:
 
 def _planting_response(planting: CropPlanting) -> CropPlantingResponse:
     return CropPlantingResponse(
-        id=planting.id, crop=planting.crop, planted_on=planting.planted_on
+        id=planting.id, crop=planting.crop, planted_on=planting.planted_on,
+        succession_interval_days=planting.succession_interval_days,
     )
 
 
@@ -372,7 +373,15 @@ def add_planting_route(
         farm = get_owned_farm(session, user, farm_id)
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
-    return _planting_response(add_planting(session, farm, crop=body.crop, planted_on=body.planted_on))
+    return _planting_response(
+        add_planting(
+            session,
+            farm,
+            crop=body.crop,
+            planted_on=body.planted_on,
+            succession_interval_days=body.succession_interval_days,
+        )
+    )
 
 
 @app.delete("/farms/{farm_id}/plantings/{planting_id}", status_code=204)
