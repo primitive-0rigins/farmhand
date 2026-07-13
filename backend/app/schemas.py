@@ -108,10 +108,18 @@ class FarmAssetCreate(BaseModel):
     name: str
     kind: str
 
-    @field_validator("name", "kind")
+    @field_validator("name")
     @classmethod
-    def required_text(cls, value: str) -> str:
+    def required_name(cls, value: str) -> str:
         value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("kind")
+    @classmethod
+    def normalized_kind(cls, value: str) -> str:
+        value = value.strip().lower()
         if not value:
             raise ValueError("must not be blank")
         return value

@@ -81,7 +81,7 @@ def test_recorded_assets_change_the_farm_plan(db) -> None:
         irrigation = client.post(
             f"/farms/{farm['id']}/assets",
             headers=headers,
-            json={"name": "Drip irrigation", "kind": "irrigation"},
+            json={"name": "Drip irrigation", "kind": " Irrigation "},
         )
         today = client.get(f"/farms/{farm['id']}/today", headers=headers)
     finally:
@@ -89,6 +89,7 @@ def test_recorded_assets_change_the_farm_plan(db) -> None:
 
     assert tractor.status_code == 201
     assert irrigation.status_code == 201
+    assert irrigation.json()["kind"] == "irrigation"
     assert any(
         task["source_rule"] == "heat_irrigation_playbook" for task in today.json()["tasks"]
     )
