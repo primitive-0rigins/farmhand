@@ -568,6 +568,11 @@ def save_task_status_route(
         farm = get_owned_farm(session, user, farm_id)
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
+    current_tasks = _build_today(
+        farm_profile(farm), farm_playbooks(farm), task_statuses(farm), farm.manual_tasks
+    ).tasks
+    if not any(task.id == task_id for task in current_tasks):
+        raise HTTPException(status_code=404, detail="task not found")
     save_task_status(session, farm, task_id=task_id, status=body.status)
 
 

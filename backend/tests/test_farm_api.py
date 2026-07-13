@@ -200,6 +200,29 @@ def test_task_status_persists_for_a_farm(db) -> None:
     assert next(task for task in refreshed["tasks"] if task["id"] == task_id)["status"] == "completed"
 
 
+def test_task_status_rejects_an_unknown_task_id(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        response = client.post(
+            f"/farms/{farm['id']}/tasks/not-a-real-task/status",
+            headers=headers,
+            json={"status": "completed"},
+        )
+        exported = client.get(f"/farms/{farm['id']}/export", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404
+    assert exported["task_states"] == []
+
+
 def test_manual_task_persists_in_a_farms_today_feed(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
