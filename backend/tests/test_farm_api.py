@@ -228,6 +228,26 @@ def test_farmer_can_remove_their_setup_records(db) -> None:
     assert stored["plantings"] == []
 
 
+def test_farmer_can_export_their_farm_data(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b", "crops": ["tomato"]},
+        ).json()
+        response = client.get(f"/farms/{farm['id']}/export", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == f'attachment; filename="farmhand-farm-{farm["id"]}.json"'
+    assert response.json()["farm"]["crops"] == ["tomato"]
+    assert response.json()["task_states"] == []
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:

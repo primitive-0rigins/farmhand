@@ -3,6 +3,7 @@ from typing import Literal, TypedDict, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
@@ -314,6 +315,28 @@ def get_farm_route(
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
     return _farm_response(farm)
+
+
+@app.get("/farms/{farm_id}/export")
+def export_farm_route(
+    farm_id: int,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> JSONResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return JSONResponse(
+        content={
+            "farm": _farm_response(farm).model_dump(mode="json"),
+            "task_states": [
+                {"task_id": state.task_id, "status": state.status}
+                for state in farm.task_states
+            ],
+        },
+        headers={"Content-Disposition": f'attachment; filename="farmhand-farm-{farm.id}.json"'},
+    )
 
 
 @app.post("/farms/{farm_id}/assets", response_model=FarmAssetResponse, status_code=201)
