@@ -70,7 +70,7 @@ type SavedPlaybook = {
   steps: string[];
 };
 
-type SetupRecord = { id: number; name?: string; crop?: string; kind?: string; planted_on?: string };
+type SetupRecord = { id: number; name?: string; crop?: string; kind?: string; planted_on?: string; succession_interval_days?: number | null };
 type FarmDetails = { playbooks: SavedPlaybook[]; assets: SetupRecord[]; spaces: SetupRecord[]; plantings: SetupRecord[] };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -126,6 +126,7 @@ function App() {
   const [showPlantingForm, setShowPlantingForm] = useState(false);
   const [plantingCrop, setPlantingCrop] = useState("");
   const [plantingDate, setPlantingDate] = useState("");
+  const [plantingInterval, setPlantingInterval] = useState("");
   const [playbooks, setPlaybooks] = useState<SavedPlaybook[]>([]);
   const [showPlaybooks, setShowPlaybooks] = useState(false);
   const [editingPlaybook, setEditingPlaybook] = useState<SavedPlaybook | null>(null);
@@ -258,7 +259,11 @@ function App() {
     const response = await fetch(`${API_BASE}/farms/${farmId}/plantings`, {
       method: "POST",
       headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ crop: plantingCrop, planted_on: plantingDate }),
+      body: JSON.stringify({
+        crop: plantingCrop,
+        planted_on: plantingDate,
+        succession_interval_days: plantingInterval ? Number(plantingInterval) : null,
+      }),
     });
     if (!response.ok) {
       setAuthMessage("Enter a crop and planting date.");
@@ -266,6 +271,7 @@ function App() {
     }
     setPlantingCrop("");
     setPlantingDate("");
+    setPlantingInterval("");
     setShowPlantingForm(false);
     setAuthMessage("Planting recorded for future planning.");
   }
@@ -539,6 +545,7 @@ function App() {
           <section className="farm-form" aria-label="Record a planting">
             <label>Crop<input value={plantingCrop} onChange={(event) => setPlantingCrop(event.target.value)} placeholder="tomato" /></label>
             <label>Planted on<input type="date" value={plantingDate} onChange={(event) => setPlantingDate(event.target.value)} /></label>
+            <label>Succession interval (days)<input type="number" min="1" value={plantingInterval} onChange={(event) => setPlantingInterval(event.target.value)} placeholder="Optional" /></label>
             <button onClick={recordPlanting}>Save planting</button>
           </section>
         ) : null}
@@ -549,7 +556,7 @@ function App() {
             {(["assets", "spaces", "plantings"] as const).map((kind) => <div key={kind}>
               <strong>{kind === "assets" ? "Equipment" : kind === "spaces" ? "Growing spaces" : "Plantings"}</strong>
               {farmDetails[kind].length ? farmDetails[kind].map((record) => <article key={record.id}>
-                <span>{record.name ?? record.crop} {record.kind ? `(${record.kind})` : ""} {record.planted_on ?? ""}</span>
+                <span>{record.name ?? record.crop} {record.kind ? `(${record.kind})` : ""} {record.planted_on ?? ""} {record.succession_interval_days ? `every ${record.succession_interval_days} days` : ""}</span>
                 <button onClick={() => removeSetupRecord(kind, record.id)}>Remove</button>
               </article>) : <p>None recorded.</p>}
             </div>)}
