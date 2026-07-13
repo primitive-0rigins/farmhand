@@ -130,6 +130,33 @@ def save_task_status(session: Session, farm: Farm, *, task_id: str, status: str)
     session.commit()
 
 
+def delete_asset(session: Session, farm: Farm, asset_id: int) -> bool:
+    asset = session.get(FarmAssetRecord, asset_id)
+    if asset is None or asset.farm_id != farm.id:
+        return False
+    session.delete(asset)
+    session.commit()
+    return True
+
+
+def delete_growing_space(session: Session, farm: Farm, space_id: int) -> bool:
+    space = session.get(GrowingSpace, space_id)
+    if space is None or space.farm_id != farm.id:
+        return False
+    session.delete(space)
+    session.commit()
+    return True
+
+
+def delete_planting(session: Session, farm: Farm, planting_id: int) -> bool:
+    planting = session.get(CropPlanting, planting_id)
+    if planting is None or planting.farm_id != farm.id:
+        return False
+    session.delete(planting)
+    session.commit()
+    return True
+
+
 def farm_profile(farm: Farm) -> FarmProfile:
     """Map the stored farm onto the domain type the rules operate on.
 
