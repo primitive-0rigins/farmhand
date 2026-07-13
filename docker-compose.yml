@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U farmhand -d farmhand"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build: ./backend
@@ -16,7 +21,8 @@ services:
       FARMHAND_DATABASE_URL: postgresql+psycopg://farmhand:farmhand@postgres:5432/farmhand
       FARMHAND_ALLOWED_ORIGINS: http://localhost:8080
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
 
