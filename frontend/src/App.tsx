@@ -125,6 +125,7 @@ function App() {
   const [plantingDate, setPlantingDate] = useState("");
   const [playbooks, setPlaybooks] = useState<SavedPlaybook[]>([]);
   const [showPlaybooks, setShowPlaybooks] = useState(false);
+  const [editingPlaybook, setEditingPlaybook] = useState<SavedPlaybook | null>(null);
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -266,6 +267,22 @@ function App() {
     setFarmId(null);
     setFarms([]);
     setAuthMessage("Signed out. Showing the public demo.");
+  }
+
+  async function savePlaybookFromLibrary() {
+    if (!editingPlaybook || !sessionToken || !farmId) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}/playbooks`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(editingPlaybook),
+    });
+    if (!response.ok) {
+      setError("Could not save this playbook.");
+      return;
+    }
+    const saved = (await response.json()) as SavedPlaybook;
+    setPlaybooks((current) => current.map((playbook) => playbook.trigger === saved.trigger ? saved : playbook));
+    setEditingPlaybook(null);
   }
 
   const tasks = useMemo(
@@ -503,9 +520,17 @@ function App() {
             <h2>Saved playbooks</h2>
             {playbooks.length > 0 ? playbooks.map((playbook) => (
               <article key={playbook.trigger}>
-                <strong>{playbook.title}</strong>
-                <span>{ruleLabel(playbook.trigger)}</span>
-                <ol>{playbook.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+                {editingPlaybook?.trigger === playbook.trigger ? <>
+                  <label>Title<input value={editingPlaybook.title} onChange={(event) => setEditingPlaybook({ ...editingPlaybook, title: event.target.value })} /></label>
+                  <label>Steps<textarea rows={4} value={editingPlaybook.steps.join("\n")} onChange={(event) => setEditingPlaybook({ ...editingPlaybook, steps: event.target.value.split("\n").map((step) => step.trim()).filter(Boolean) })} /></label>
+                  <button onClick={savePlaybookFromLibrary}>Save playbook</button>
+                  <button onClick={() => setEditingPlaybook(null)}>Cancel</button>
+                </> : <>
+                  <strong>{playbook.title}</strong>
+                  <span>{ruleLabel(playbook.trigger)}</span>
+                  <ol>{playbook.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+                  <button onClick={() => setEditingPlaybook(playbook)}>Edit playbook</button>
+                </>}
               </article>
             )) : <p>Save edits from a generated weather task to build this farm's reusable playbooks.</p>}
           </section>
