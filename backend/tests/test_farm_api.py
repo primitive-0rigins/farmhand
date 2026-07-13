@@ -245,13 +245,20 @@ def test_farmer_can_remove_a_manual_task(db) -> None:
             headers=headers,
             json={"title": "Check row cover", "reason": "Wind is expected.", "due_date": today["today"]},
         ).json()
+        client.post(
+            f"/farms/{farm['id']}/tasks/manual-{task['id']}/status",
+            headers=headers,
+            json={"status": "completed"},
+        )
         deleted = client.delete(f"/farms/{farm['id']}/manual-tasks/{task['id']}", headers=headers)
         refreshed = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+        exported = client.get(f"/farms/{farm['id']}/export", headers=headers).json()
     finally:
         app.dependency_overrides.clear()
 
     assert deleted.status_code == 204
     assert not any(item["id"] == f"manual-{task['id']}" for item in refreshed["tasks"])
+    assert exported["task_states"] == []
 
 
 def test_farmer_can_remove_their_setup_records(db) -> None:
