@@ -109,6 +109,9 @@ function App() {
   const [farmState, setFarmState] = useState("");
   const [farmZone, setFarmZone] = useState("");
   const [farmCrops, setFarmCrops] = useState("");
+  const [farmAssets, setFarmAssets] = useState<string[]>([]);
+  const [spaceName, setSpaceName] = useState("");
+  const [spaceKind, setSpaceKind] = useState("field");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -189,6 +192,18 @@ function App() {
       return;
     }
     const farm = (await response.json()) as Farm;
+    await Promise.all([
+      ...farmAssets.map((kind) => fetch(`${API_BASE}/farms/${farm.id}/assets`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: kind === "irrigation" ? "Irrigation" : kind, kind }),
+      })),
+      ...(spaceName.trim() ? [fetch(`${API_BASE}/farms/${farm.id}/spaces`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: spaceName, kind: spaceKind }),
+      })] : []),
+    ]);
     setFarms((current) => [...current, farm]);
     localStorage.setItem("farmhand-farm-id", String(farm.id));
     setFarmId(farm.id);
@@ -376,6 +391,12 @@ function App() {
             <label>State<input value={farmState} onChange={(event) => setFarmState(event.target.value)} /></label>
             <label>Planting zone<input value={farmZone} onChange={(event) => setFarmZone(event.target.value)} placeholder="8b" /></label>
             <label>Crops<input value={farmCrops} onChange={(event) => setFarmCrops(event.target.value)} placeholder="tomato, pepper" /></label>
+            <fieldset>
+              <legend>Equipment</legend>
+              {['irrigation', 'tractor', 'greenhouse'].map((kind) => <label key={kind}><input type="checkbox" checked={farmAssets.includes(kind)} onChange={() => setFarmAssets((current) => current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind])} /> {kind}</label>)}
+            </fieldset>
+            <label>First growing space<input value={spaceName} onChange={(event) => setSpaceName(event.target.value)} placeholder="North field" /></label>
+            <label>Space type<select value={spaceKind} onChange={(event) => setSpaceKind(event.target.value)}><option value="field">Field</option><option value="greenhouse">Greenhouse</option><option value="high_tunnel">High tunnel</option><option value="orchard">Orchard</option><option value="pasture">Pasture</option></select></label>
             <button onClick={createFarm}>Save farm</button>
           </section>
         ) : null}

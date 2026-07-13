@@ -156,6 +156,29 @@ nav button:disabled:hover {
   gap: 5px;
 }
 
+.farm-form fieldset {
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.farm-form legend {
+  color: #48544b;
+  font-size: 13px;
+  font-weight: 700;
+  width: 100%;
+}
+
+.farm-form fieldset label {
+  align-items: center;
+  display: flex;
+  font-weight: 400;
+  gap: 3px;
+}
+
 .farm-form input,
 .farm-form button {
   background: #fffdfa;
