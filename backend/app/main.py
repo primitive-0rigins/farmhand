@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import date
-from typing import TypedDict
+from typing import Literal, TypedDict, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +12,7 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
-from app.farms import add_asset, add_growing_space, add_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook
+from app.farms import add_asset, add_growing_space, add_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
@@ -33,6 +33,7 @@ from app.schemas import (
     SessionResponse,
     TodayResponse,
     TodayTask,
+    TaskStatusUpdate,
     UserResponse,
     VerifyRequest,
     WeekDayPlan,
@@ -157,7 +158,11 @@ def serialize_task(task: GeneratedTask) -> SerializedTask:
     }
 
 
-def _build_today(farm: FarmProfile, playbooks: dict[str, Playbook] | None = None) -> TodayResponse:
+def _build_today(
+    farm: FarmProfile,
+    playbooks: dict[str, Playbook] | None = None,
+    statuses: dict[str, str] | None = None,
+) -> TodayResponse:
     today_date = date(2026, 6, 26)
     # The farm's town drives the forecast: geocode it, then ask the weather
     # provider for that location. A real deployment stores the coordinates so
@@ -190,7 +195,16 @@ def _build_today(farm: FarmProfile, playbooks: dict[str, Playbook] | None = None
             high_wind_mph=forecast.high_wind_mph,
             heat_index_f=forecast.heat_index_f,
         ),
-        tasks=[TodayTask(**serialize_task(task)) for task in tasks],
+        tasks=[
+            TodayTask(
+                **serialize_task(task),
+                status=cast(
+                    Literal["open", "completed", "snoozed"],
+                    (statuses or {}).get(task_id(task), "open"),
+                ),
+            )
+            for task in tasks
+        ],
         week=[
             WeekDayPlan(
                 date=plan_date.isoformat(),
@@ -357,6 +371,21 @@ def save_farm_playbook_route(
     )
 
 
+@app.post("/farms/{farm_id}/tasks/{task_id}/status", status_code=204)
+def save_task_status_route(
+    farm_id: int,
+    task_id: str,
+    body: TaskStatusUpdate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> None:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    save_task_status(session, farm, task_id=task_id, status=body.status)
+
+
 @app.get("/farms/{farm_id}/today", response_model=TodayResponse)
 def farm_today_route(
     farm_id: int,
@@ -367,4 +396,4 @@ def farm_today_route(
         farm = get_owned_farm(session, user, farm_id)
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
-    return _build_today(farm_profile(farm), farm_playbooks(farm))
+    return _build_today(farm_profile(farm), farm_playbooks(farm), task_statuses(farm))

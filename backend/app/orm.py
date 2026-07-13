@@ -67,6 +67,9 @@ class Farm(Base):
     playbooks: Mapped[list["FarmPlaybook"]] = relationship(
         back_populates="farm", cascade="all, delete-orphan"
     )
+    task_states: Mapped[list["FarmTaskState"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
 
 
 class FarmAssetRecord(Base):
@@ -113,3 +116,15 @@ class FarmPlaybook(Base):
     steps: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     farm: Mapped[Farm] = relationship(back_populates="playbooks")
+
+
+class FarmTaskState(Base):
+    __tablename__ = "farm_task_states"
+    __table_args__ = (UniqueConstraint("farm_id", "task_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    task_id: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(20))
+
+    farm: Mapped[Farm] = relationship(back_populates="task_states")

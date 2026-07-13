@@ -29,6 +29,7 @@ class TodayTask(BaseModel):
     reason: str
     steps: list[str]
     source_rule: str | None
+    status: Literal["open", "completed", "snoozed"] = "open"
 
 
 class WeekDayPlan(BaseModel):
@@ -199,3 +200,7 @@ class FarmPlaybookResponse(BaseModel):
     trigger: str
     title: str
     steps: list[str]
+
+
+class TaskStatusUpdate(BaseModel):
+    status: Literal["open", "completed", "snoozed"]

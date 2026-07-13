@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.models import FarmAsset, FarmProfile, Playbook
-from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, FarmTaskState, GrowingSpace, User
 
 
 class FarmNotFound(Exception):
@@ -108,6 +108,26 @@ def farm_playbooks(farm: Farm) -> dict[str, Playbook]:
         )
         for playbook in farm.playbooks
     }
+
+
+def task_statuses(farm: Farm) -> dict[str, str]:
+    return {state.task_id: state.status for state in farm.task_states}
+
+
+def save_task_status(session: Session, farm: Farm, *, task_id: str, status: str) -> None:
+    state = session.scalar(
+        select(FarmTaskState).where(
+            FarmTaskState.farm_id == farm.id, FarmTaskState.task_id == task_id
+        )
+    )
+    if status == "open":
+        if state is not None:
+            session.delete(state)
+    elif state is None:
+        session.add(FarmTaskState(farm_id=farm.id, task_id=task_id, status=status))
+    else:
+        state.status = status
+    session.commit()
 
 
 def farm_profile(farm: Farm) -> FarmProfile:

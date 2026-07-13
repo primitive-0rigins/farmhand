@@ -175,6 +175,31 @@ def test_saved_playbook_changes_the_farms_weather_task(db) -> None:
     assert task["steps"] == ["Latch the tunnel.", "Cover the tractor."]
 
 
+def test_task_status_persists_for_a_farm(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        today = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+        task_id = today["tasks"][0]["id"]
+        saved = client.post(
+            f"/farms/{farm['id']}/tasks/{task_id}/status",
+            headers=headers,
+            json={"status": "completed"},
+        )
+        refreshed = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert saved.status_code == 204
+    assert next(task for task in refreshed["tasks"] if task["id"] == task_id)["status"] == "completed"
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
