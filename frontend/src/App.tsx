@@ -57,6 +57,11 @@ type TodayResponse = {
   week: WeekDayPlan[];
 };
 
+type Farm = {
+  id: number;
+  name: string;
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 function formatDate(value: string) {
@@ -90,6 +95,14 @@ function ruleLabel(sourceRule: string | null) {
 }
 
 function App() {
+  const [sessionToken, setSessionToken] = useState(() => localStorage.getItem("farmhand-session-token"));
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const [farmId, setFarmId] = useState<number | null>(() => {
+    const stored = localStorage.getItem("farmhand-farm-id");
+    return stored ? Number(stored) : null;
+  });
+  const [email, setEmail] = useState("");
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -105,7 +118,10 @@ function App() {
   const [manualReason, setManualReason] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE}/today`)
+    const endpoint = sessionToken && farmId ? `/farms/${farmId}/today` : "/today";
+    fetch(`${API_BASE}${endpoint}`, {
+      headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+    })
       .then((response) => {
         if (!response.ok) {
           throw new Error("Today feed is not available.");
@@ -114,7 +130,40 @@ function App() {
       })
       .then(setToday)
       .catch((caught: Error) => setError(caught.message));
-  }, []);
+  }, [farmId, sessionToken]);
+
+  useEffect(() => {
+    if (!sessionToken) return;
+    fetch(`${API_BASE}/farms`, { headers: { Authorization: `Bearer ${sessionToken}` } })
+      .then((response) => response.json() as Promise<Farm[]>)
+      .then((loaded) => {
+        setFarms(loaded);
+        if (!farmId && loaded[0]) setFarmId(loaded[0].id);
+      });
+  }, [farmId, sessionToken]);
+
+  async function signIn() {
+    setAuthMessage(null);
+    const requested = await fetch(`${API_BASE}/auth/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const login = (await requested.json()) as { dev_login_token?: string };
+    if (!requested.ok || !login.dev_login_token) {
+      setAuthMessage("Check your email for the sign-in link.");
+      return;
+    }
+    const verified = await fetch(`${API_BASE}/auth/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: login.dev_login_token }),
+    });
+    const session = (await verified.json()) as { session_token: string };
+    localStorage.setItem("farmhand-session-token", session.session_token);
+    setSessionToken(session.session_token);
+    setAuthMessage("Signed in. Choose a farm below.");
+  }
 
   const tasks = useMemo(
     () =>
@@ -164,7 +213,7 @@ function App() {
     setDraftSteps(task.steps.join("\n"));
   }
 
-  function savePlaybook(task: TodayTask) {
+  async function savePlaybook(task: TodayTask) {
     const title = draftTitle.trim();
     const steps = draftSteps
       .split("\n")
@@ -172,6 +221,18 @@ function App() {
       .filter(Boolean);
 
     if (!title) return;
+
+    if (sessionToken && farmId && task.source_rule) {
+      const saved = await fetch(`${API_BASE}/farms/${farmId}/playbooks`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ trigger: task.source_rule, title, steps }),
+      });
+      if (!saved.ok) {
+        setError("Could not save this playbook.");
+        return;
+      }
+    }
 
     setPlaybookOverrides((current) => ({
       ...current,
@@ -248,6 +309,34 @@ function App() {
             Add task
           </button>
         </header>
+
+        <section className="account-bar" aria-label="Farm access">
+          {sessionToken ? (
+            <>
+              <span>Using your farm</span>
+              <select
+                aria-label="Choose farm"
+                value={farmId ?? ""}
+                onChange={(event) => {
+                  const selected = Number(event.target.value);
+                  localStorage.setItem("farmhand-farm-id", String(selected));
+                  setFarmId(selected);
+                }}
+              >
+                {farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}
+              </select>
+            </>
+          ) : (
+            <>
+              <label>
+                Use your farm
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="farmer@example.com" />
+              </label>
+              <button onClick={signIn}>Sign in</button>
+            </>
+          )}
+          {authMessage ? <span>{authMessage}</span> : null}
+        </section>
 
         {error ? (
           <section className="empty-state" role="alert">

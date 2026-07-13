@@ -99,6 +99,43 @@ nav button:disabled:hover {
   margin: 0;
 }
 
+.account-bar {
+  align-items: center;
+  color: #48544b;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -8px 0 20px;
+}
+
+.account-bar label {
+  align-items: center;
+  display: flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.account-bar input,
+.account-bar select {
+  background: #fffdfa;
+  border: 1px solid #d8d1c2;
+  border-radius: 6px;
+  color: #26352b;
+  font: inherit;
+  padding: 7px 9px;
+}
+
+.account-bar button {
+  background: #eef2ec;
+  border: 0;
+  border-radius: 6px;
+  color: #26352b;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 12px;
+}
+
 .primary-action,
 .actions button {
   align-items: center;
