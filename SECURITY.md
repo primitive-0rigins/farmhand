@@ -12,8 +12,7 @@ Farmhand is public. Keep demo data public-safe and city-level.
 
 ## Before Production
 
-- Add authentication before saving farm profiles or playbooks.
-- Add authorization checks to every user-owned farm resource.
+- Keep authentication and authorization checks on every user-owned farm resource.
 - Add rate limits around public API routes.
 - Review provider terms for weather, pest, and disease data.
 - Add backup and export controls before storing commercial farm records.

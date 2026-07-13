@@ -106,3 +106,19 @@ Use `.env.example` as the public-safe template.
 - Do not commit real farm addresses, customer data, API keys, tokens, logs, or `.env` files.
 - Keep deployed CORS origins explicit with `FARMHAND_ALLOWED_ORIGINS`.
 - See `SECURITY.md` before adding persistence, accounts, weather providers, or AI providers.
+
+## Deployment Checklist
+
+1. Set `FARMHAND_DATABASE_URL` to a managed Postgres database and run
+   `python -m alembic upgrade head` as part of each release.
+2. Set `FARMHAND_ALLOWED_ORIGINS` to the exact deployed frontend origin. Do
+   not use a wildcard.
+3. Keep `FARMHAND_DEV_AUTH=0`; it exposes a login token only for local
+   development. Configure a real email sender before inviting production users.
+4. Build the frontend with `VITE_API_BASE_URL` set to the deployed API URL.
+5. Configure the NWS/Open-Meteo adapters only after reviewing provider terms;
+   the public demo intentionally uses deterministic demo weather until then.
+
+The included `docker-compose.yml` is a local Postgres convenience, not a
+production deployment definition. Its credentials are intentionally public and
+must be replaced by managed database credentials in every deployed environment.
