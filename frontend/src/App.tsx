@@ -162,6 +162,27 @@ function App() {
   }, [farmId, sessionToken]);
 
   useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("token");
+    if (!token) return;
+    fetch(`${API_BASE}/auth/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("This sign-in link is invalid or expired.");
+        return response.json() as Promise<{ session_token: string }>;
+      })
+      .then((session) => {
+        localStorage.setItem("farmhand-session-token", session.session_token);
+        setSessionToken(session.session_token);
+        setAuthMessage("Signed in. Choose a farm below.");
+        window.history.replaceState({}, "", window.location.pathname);
+      })
+      .catch((caught: Error) => setAuthMessage(caught.message));
+  }, []);
+
+  useEffect(() => {
     if (!today) return;
     setDoneTasks(new Set(today.tasks.filter((task) => task.status === "completed").map((task) => task.id)));
     setSnoozedTasks(new Set(today.tasks.filter((task) => task.status === "snoozed").map((task) => task.id)));

@@ -31,3 +31,19 @@ def dev_auth_enabled() -> bool:
     convenience and MUST stay off in production; the token otherwise goes only
     to the email sender (the console in dev)."""
     return os.getenv("FARMHAND_DEV_AUTH", "0") == "1"
+
+
+def smtp_settings() -> tuple[str, int, str, str | None, str | None, str] | None:
+    host = os.getenv("FARMHAND_SMTP_HOST")
+    sender = os.getenv("FARMHAND_SMTP_SENDER")
+    app_url = os.getenv("FARMHAND_APP_URL")
+    if not host or not sender or not app_url:
+        return None
+    return (
+        host,
+        int(os.getenv("FARMHAND_SMTP_PORT", "587")),
+        sender,
+        os.getenv("FARMHAND_SMTP_USERNAME"),
+        os.getenv("FARMHAND_SMTP_PASSWORD"),
+        app_url,
+    )

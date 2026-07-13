@@ -7,11 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
-from app.config import dev_auth_enabled, get_allowed_origins
+from app.config import dev_auth_enabled, get_allowed_origins, smtp_settings
 from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
-from app.email import ConsoleEmailSender, EmailSender
+from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
 from app.farms import add_asset, add_growing_space, add_planting, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
@@ -41,7 +41,8 @@ from app.schemas import (
 from app.weather import DemoWeatherProvider, WeatherProvider
 
 # Swap ConsoleEmailSender() for a real SMTP/transactional sender in production.
-email_sender: EmailSender = ConsoleEmailSender()
+smtp = smtp_settings()
+email_sender: EmailSender = SmtpEmailSender(*smtp) if smtp else ConsoleEmailSender()
 
 # Greenville, SC demo coordinates, used as a fallback if geocoding is skipped.
 DEMO_LATITUDE = 34.85
