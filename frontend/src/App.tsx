@@ -103,6 +103,11 @@ function App() {
   });
   const [email, setEmail] = useState("");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [showFarmForm, setShowFarmForm] = useState(false);
+  const [farmName, setFarmName] = useState("");
+  const [farmCity, setFarmCity] = useState("");
+  const [farmState, setFarmState] = useState("");
+  const [farmZone, setFarmZone] = useState("");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -163,6 +168,30 @@ function App() {
     localStorage.setItem("farmhand-session-token", session.session_token);
     setSessionToken(session.session_token);
     setAuthMessage("Signed in. Choose a farm below.");
+  }
+
+  async function createFarm() {
+    if (!sessionToken) return;
+    const response = await fetch(`${API_BASE}/farms`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: farmName,
+        city: farmCity,
+        state: farmState,
+        planting_zone: farmZone,
+        crops: [],
+      }),
+    });
+    if (!response.ok) {
+      setAuthMessage("Enter a farm name, city, state, and planting zone.");
+      return;
+    }
+    const farm = (await response.json()) as Farm;
+    setFarms((current) => [...current, farm]);
+    localStorage.setItem("farmhand-farm-id", String(farm.id));
+    setFarmId(farm.id);
+    setShowFarmForm(false);
   }
 
   const tasks = useMemo(
@@ -325,6 +354,7 @@ function App() {
               >
                 {farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}
               </select>
+              {farms.length === 0 ? <button onClick={() => setShowFarmForm(true)}>Create your first farm</button> : null}
             </>
           ) : (
             <>
@@ -337,6 +367,16 @@ function App() {
           )}
           {authMessage ? <span>{authMessage}</span> : null}
         </section>
+
+        {showFarmForm ? (
+          <section className="farm-form" aria-label="Create your first farm">
+            <label>Farm name<input value={farmName} onChange={(event) => setFarmName(event.target.value)} /></label>
+            <label>City<input value={farmCity} onChange={(event) => setFarmCity(event.target.value)} /></label>
+            <label>State<input value={farmState} onChange={(event) => setFarmState(event.target.value)} /></label>
+            <label>Planting zone<input value={farmZone} onChange={(event) => setFarmZone(event.target.value)} placeholder="8b" /></label>
+            <button onClick={createFarm}>Save farm</button>
+          </section>
+        ) : null}
 
         {error ? (
           <section className="empty-state" role="alert">

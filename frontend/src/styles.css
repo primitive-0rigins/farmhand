@@ -136,6 +136,43 @@ nav button:disabled:hover {
   padding: 8px 12px;
 }
 
+.farm-form {
+  align-items: end;
+  background: white;
+  border: 1px solid #ddd8ca;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  margin: -8px 0 20px;
+  padding: 14px;
+}
+
+.farm-form label {
+  color: #48544b;
+  display: grid;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 5px;
+}
+
+.farm-form input,
+.farm-form button {
+  background: #fffdfa;
+  border: 1px solid #d8d1c2;
+  border-radius: 6px;
+  color: #26352b;
+  font: inherit;
+  padding: 8px 9px;
+}
+
+.farm-form button {
+  background: #2f6b45;
+  border: 0;
+  color: white;
+  cursor: pointer;
+}
+
 .primary-action,
 .actions button {
   align-items: center;
@@ -506,6 +543,10 @@ nav button:disabled:hover {
     grid-template-columns: 1fr;
   }
 
+  .farm-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .task {
     align-items: flex-start;
     gap: 14px;
@@ -542,6 +583,10 @@ nav button:disabled:hover {
   }
 
   .week-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .farm-form {
     grid-template-columns: 1fr;
   }
 }
