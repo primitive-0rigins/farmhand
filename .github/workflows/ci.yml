@@ -27,7 +27,9 @@ jobs:
           python -m pip install -e '.[dev]'
 
       - name: Check migrations
-        run: FARMHAND_DATABASE_URL=sqlite:////tmp/farmhand-ci.db python -m alembic upgrade head
+        run: |
+          FARMHAND_DATABASE_URL=sqlite:////tmp/farmhand-ci.db python -m alembic upgrade head
+          FARMHAND_DATABASE_URL=sqlite:////tmp/farmhand-ci.db python -m alembic check
 
       - name: Test
         run: python -m pytest
