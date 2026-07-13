@@ -112,6 +112,9 @@ function App() {
   const [farmAssets, setFarmAssets] = useState<string[]>([]);
   const [spaceName, setSpaceName] = useState("");
   const [spaceKind, setSpaceKind] = useState("field");
+  const [showPlantingForm, setShowPlantingForm] = useState(false);
+  const [plantingCrop, setPlantingCrop] = useState("");
+  const [plantingDate, setPlantingDate] = useState("");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -208,6 +211,35 @@ function App() {
     localStorage.setItem("farmhand-farm-id", String(farm.id));
     setFarmId(farm.id);
     setShowFarmForm(false);
+  }
+
+  async function recordPlanting() {
+    if (!sessionToken || !farmId) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}/plantings`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ crop: plantingCrop, planted_on: plantingDate }),
+    });
+    if (!response.ok) {
+      setAuthMessage("Enter a crop and planting date.");
+      return;
+    }
+    setPlantingCrop("");
+    setPlantingDate("");
+    setShowPlantingForm(false);
+    setAuthMessage("Planting recorded for future planning.");
+  }
+
+  async function signOut() {
+    if (sessionToken) {
+      await fetch(`${API_BASE}/auth/logout`, { method: "POST", headers: { Authorization: `Bearer ${sessionToken}` } });
+    }
+    localStorage.removeItem("farmhand-session-token");
+    localStorage.removeItem("farmhand-farm-id");
+    setSessionToken(null);
+    setFarmId(null);
+    setFarms([]);
+    setAuthMessage("Signed out. Showing the public demo.");
   }
 
   const tasks = useMemo(
@@ -371,6 +403,8 @@ function App() {
                 {farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.name}</option>)}
               </select>
               {farms.length === 0 ? <button onClick={() => setShowFarmForm(true)}>Create your first farm</button> : null}
+              {farmId ? <button onClick={() => setShowPlantingForm(true)}>Record planting</button> : null}
+              <button onClick={signOut}>Sign out</button>
             </>
           ) : (
             <>
@@ -398,6 +432,14 @@ function App() {
             <label>First growing space<input value={spaceName} onChange={(event) => setSpaceName(event.target.value)} placeholder="North field" /></label>
             <label>Space type<select value={spaceKind} onChange={(event) => setSpaceKind(event.target.value)}><option value="field">Field</option><option value="greenhouse">Greenhouse</option><option value="high_tunnel">High tunnel</option><option value="orchard">Orchard</option><option value="pasture">Pasture</option></select></label>
             <button onClick={createFarm}>Save farm</button>
+          </section>
+        ) : null}
+
+        {showPlantingForm ? (
+          <section className="farm-form" aria-label="Record a planting">
+            <label>Crop<input value={plantingCrop} onChange={(event) => setPlantingCrop(event.target.value)} placeholder="tomato" /></label>
+            <label>Planted on<input type="date" value={plantingDate} onChange={(event) => setPlantingDate(event.target.value)} /></label>
+            <button onClick={recordPlanting}>Save planting</button>
           </section>
         ) : null}
 
