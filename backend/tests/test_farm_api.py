@@ -122,6 +122,30 @@ def test_farmer_can_record_a_growing_space(db) -> None:
     assert stored.json()["spaces"] == [created.json()]
 
 
+def test_farmer_can_record_a_crop_planting(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        created = client.post(
+            f"/farms/{farm['id']}/plantings",
+            headers=headers,
+            json={"crop": " Tomato ", "planted_on": "2026-04-20"},
+        )
+        stored = client.get(f"/farms/{farm['id']}", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert created.status_code == 201
+    assert created.json()["crop"] == "tomato"
+    assert stored.json()["plantings"] == [created.json()]
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
