@@ -58,6 +58,9 @@ class Farm(Base):
     assets: Mapped[list["FarmAssetRecord"]] = relationship(
         back_populates="farm", cascade="all, delete-orphan"
     )
+    spaces: Mapped[list["GrowingSpace"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
 
 
 class FarmAssetRecord(Base):
@@ -69,3 +72,14 @@ class FarmAssetRecord(Base):
     kind: Mapped[str] = mapped_column(String(60))
 
     farm: Mapped[Farm] = relationship(back_populates="assets")
+
+
+class GrowingSpace(Base):
+    __tablename__ = "growing_spaces"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(60))
+
+    farm: Mapped[Farm] = relationship(back_populates="spaces")

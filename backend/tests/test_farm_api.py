@@ -98,6 +98,29 @@ def test_recorded_assets_change_the_farm_plan(db) -> None:
     assert "Make sure tractor and implements are covered or parked safely." in weather_task["steps"]
 
 
+def test_farmer_can_record_a_growing_space(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        created = client.post(
+            f"/farms/{farm['id']}/spaces",
+            headers=headers,
+            json={"name": "North tunnel", "kind": "high_tunnel"},
+        )
+        stored = client.get(f"/farms/{farm['id']}", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert created.status_code == 201
+    assert stored.json()["spaces"] == [created.json()]
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
@@ -162,4 +185,5 @@ def test_farm_creation_rejects_blank_fields_and_normalizes_crops(db) -> None:
         "planting_zone": "8b",
         "crops": ["tomato", "pepper"],
         "assets": [],
+        "spaces": [],
     }

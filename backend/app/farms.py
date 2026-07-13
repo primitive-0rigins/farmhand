@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.models import FarmAsset, FarmProfile
-from app.orm import Farm, FarmAssetRecord, User
+from app.orm import Farm, FarmAssetRecord, GrowingSpace, User
 
 
 class FarmNotFound(Exception):
@@ -63,6 +63,14 @@ def add_asset(session: Session, farm: Farm, *, name: str, kind: str) -> FarmAsse
     session.commit()
     session.refresh(asset)
     return asset
+
+
+def add_growing_space(session: Session, farm: Farm, *, name: str, kind: str) -> GrowingSpace:
+    space = GrowingSpace(farm_id=farm.id, name=name, kind=kind)
+    session.add(space)
+    session.commit()
+    session.refresh(space)
+    return space
 
 
 def farm_profile(farm: Farm) -> FarmProfile:

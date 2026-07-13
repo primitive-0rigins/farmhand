@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -99,6 +101,7 @@ class FarmResponse(BaseModel):
     planting_zone: str
     crops: list[str]
     assets: list["FarmAssetResponse"]
+    spaces: list["GrowingSpaceResponse"]
 
 
 class FarmAssetCreate(BaseModel):
@@ -115,6 +118,25 @@ class FarmAssetCreate(BaseModel):
 
 
 class FarmAssetResponse(BaseModel):
+    id: int
+    name: str
+    kind: str
+
+
+class GrowingSpaceCreate(BaseModel):
+    name: str
+    kind: Literal["field", "greenhouse", "high_tunnel", "orchard", "pasture"]
+
+    @field_validator("name")
+    @classmethod
+    def required_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+
+class GrowingSpaceResponse(BaseModel):
     id: int
     name: str
     kind: str
