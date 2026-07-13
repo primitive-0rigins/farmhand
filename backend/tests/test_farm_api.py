@@ -1,0 +1,82 @@
+from fastapi.testclient import TestClient
+
+from app.auth import request_magic_link, verify_magic_link
+from app.db import get_session
+from app.main import app
+from tests.conftest import RecordingEmailSender
+
+
+def _authorization(db, email: str) -> dict[str, str]:
+    sender = RecordingEmailSender()
+    request_magic_link(db, email, sender)
+    assert sender.last_token is not None
+    token = verify_magic_link(db, sender.last_token)
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_farm_routes_require_authentication(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        response = TestClient(app).get("/farms")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 401
+
+
+def test_farmer_can_create_list_and_plan_for_their_farm(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/farms",
+            headers=_authorization(db, "farmer@example.com"),
+            json={
+                "name": "South Field",
+                "city": "Greenville",
+                "state": "SC",
+                "planting_zone": "8b",
+                "crops": ["tomato"],
+            },
+        )
+        farm = response.json()
+        listed = client.get("/farms", headers=_authorization(db, "farmer@example.com"))
+        today = client.get(
+            f"/farms/{farm['id']}/today", headers=_authorization(db, "farmer@example.com")
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert listed.json() == [farm]
+    assert today.status_code == 200
+    assert today.json()["farm"]["name"] == "South Field"
+    assert any(
+        task["source_rule"] == "tomato_summer_scouting"
+        for task in today.json()["tasks"]
+    )
+
+
+def test_farmer_cannot_read_another_users_farm(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        owner_headers = _authorization(db, "owner@example.com")
+        farm = client.post(
+            "/farms",
+            headers=owner_headers,
+            json={
+                "name": "Owner Farm",
+                "city": "Greenville",
+                "state": "SC",
+                "planting_zone": "8b",
+                "crops": [],
+            },
+        ).json()
+        response = client.get(
+            f"/farms/{farm['id']}", headers=_authorization(db, "other@example.com")
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 404

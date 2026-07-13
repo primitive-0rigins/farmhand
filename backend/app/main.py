@@ -11,9 +11,12 @@ from app.db import get_session, init_db
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
+from app.farms import FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
-from app.orm import User
+from app.orm import Farm, User
 from app.schemas import (
+    FarmCreate,
+    FarmResponse,
     MagicLinkRequest,
     MagicLinkResponse,
     SessionResponse,
@@ -132,24 +135,11 @@ def serialize_task(task: GeneratedTask) -> dict[str, object]:
     }
 
 
-@app.get("/today", response_model=TodayResponse)
-def today() -> TodayResponse:
+def _build_today(farm: FarmProfile) -> TodayResponse:
     today_date = date(2026, 6, 26)
-    farm = FarmProfile(
-        name="Demo Farm",
-        city="Greenville",
-        state="SC",
-        planting_zone="8b",
-        crops=["tomato", "pepper"],
-        assets=[
-            FarmAsset(name="Main greenhouse", kind="greenhouse"),
-            FarmAsset(name="Kubota", kind="tractor"),
-            FarmAsset(name="Drip irrigation", kind="irrigation"),
-        ],
-    )
-    # The farm's town drives the forecast: geocode it once, then ask the
-    # weather provider for that location. A real deployment stores the result
-    # so it is not looked up on every request.
+    # The farm's town drives the forecast: geocode it, then ask the weather
+    # provider for that location. A real deployment stores the coordinates so
+    # they are not looked up on every request.
     location = geocoder.locate(f"{farm.city}, {farm.state}") or Coordinates(
         DEMO_LATITUDE, DEMO_LONGITUDE
     )
@@ -188,3 +178,84 @@ def today() -> TodayResponse:
             for plan_date, day_tasks in week.items()
         ],
     )
+
+
+@app.get("/today", response_model=TodayResponse)
+def today() -> TodayResponse:
+    """Public demo: one showcase farm, no login required."""
+    farm = FarmProfile(
+        name="Demo Farm",
+        city="Greenville",
+        state="SC",
+        planting_zone="8b",
+        crops=["tomato", "pepper"],
+        assets=[
+            FarmAsset(name="Main greenhouse", kind="greenhouse"),
+            FarmAsset(name="Kubota", kind="tractor"),
+            FarmAsset(name="Drip irrigation", kind="irrigation"),
+        ],
+    )
+    return _build_today(farm)
+
+
+def _farm_response(farm: Farm) -> FarmResponse:
+    return FarmResponse(
+        id=farm.id,
+        name=farm.name,
+        city=farm.city,
+        state=farm.state,
+        planting_zone=farm.planting_zone,
+        crops=list(farm.crops),
+    )
+
+
+@app.post("/farms", response_model=FarmResponse, status_code=201)
+def create_farm_route(
+    body: FarmCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmResponse:
+    farm = create_farm(
+        session,
+        user,
+        name=body.name,
+        city=body.city,
+        state=body.state,
+        planting_zone=body.planting_zone,
+        crops=body.crops,
+    )
+    return _farm_response(farm)
+
+
+@app.get("/farms", response_model=list[FarmResponse])
+def list_farms_route(
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> list[FarmResponse]:
+    return [_farm_response(farm) for farm in list_farms(session, user)]
+
+
+@app.get("/farms/{farm_id}", response_model=FarmResponse)
+def get_farm_route(
+    farm_id: int,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _farm_response(farm)
+
+
+@app.get("/farms/{farm_id}/today", response_model=TodayResponse)
+def farm_today_route(
+    farm_id: int,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> TodayResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _build_today(farm_profile(farm))
