@@ -35,6 +35,9 @@ jobs:
       - name: Lint
         run: python -m ruff check .
 
+      - name: Type check
+        run: python -m mypy app
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest

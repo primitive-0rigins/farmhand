@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import date
+from typing import TypedDict
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,14 +20,18 @@ from app.schemas import (
     FarmAssetCreate,
     FarmAssetResponse,
     FarmResponse,
+    FarmSummary,
+    ForecastSummary,
     GrowingSpaceCreate,
     GrowingSpaceResponse,
     MagicLinkRequest,
     MagicLinkResponse,
     SessionResponse,
     TodayResponse,
+    TodayTask,
     UserResponse,
     VerifyRequest,
+    WeekDayPlan,
 )
 from app.weather import DemoWeatherProvider, WeatherProvider
 
@@ -59,6 +64,16 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+class SerializedTask(TypedDict):
+    id: str
+    title: str
+    due_date: str
+    severity: str
+    reason: str
+    steps: list[str]
+    source_rule: str | None
 
 
 def current_user(
@@ -126,7 +141,7 @@ def task_id(task: GeneratedTask) -> str:
     return f"{task.due_date.isoformat()}-{source}-{slug(task.title)}"
 
 
-def serialize_task(task: GeneratedTask) -> dict[str, object]:
+def serialize_task(task: GeneratedTask) -> SerializedTask:
     return {
         "id": task_id(task),
         "title": task.title,
@@ -155,29 +170,29 @@ def _build_today(farm: FarmProfile) -> TodayResponse:
     week = generate_weekly_plan(farm=farm, forecasts=forecasts, start_date=today_date)
 
     return TodayResponse(
-        farm={
-            "name": farm.name,
-            "city": farm.city,
-            "state": farm.state,
-            "planting_zone": farm.planting_zone,
-        },
+        farm=FarmSummary(
+            name=farm.name,
+            city=farm.city,
+            state=farm.state,
+            planting_zone=farm.planting_zone,
+        ),
         today=today_date.isoformat(),
-        forecast={
-            "date": forecast.forecast_date.isoformat(),
-            "summary": "Storms tomorrow, hot afternoons this week",
-            "thunderstorm_risk": forecast.thunderstorm_risk,
-            "high_wind_mph": forecast.high_wind_mph,
-            "heat_index_f": forecast.heat_index_f,
-        },
-        tasks=[serialize_task(task) for task in tasks],
+        forecast=ForecastSummary(
+            date=forecast.forecast_date.isoformat(),
+            summary="Storms tomorrow, hot afternoons this week",
+            thunderstorm_risk=forecast.thunderstorm_risk,
+            high_wind_mph=forecast.high_wind_mph,
+            heat_index_f=forecast.heat_index_f,
+        ),
+        tasks=[TodayTask(**serialize_task(task)) for task in tasks],
         week=[
-            {
-                "date": plan_date.isoformat(),
-                "task_count": len(day_tasks),
-                "urgent_count": sum(task.severity == TaskSeverity.URGENT for task in day_tasks),
-                "watch_count": sum(task.severity == TaskSeverity.WATCH for task in day_tasks),
-                "top_task": day_tasks[0].title if day_tasks else None,
-            }
+            WeekDayPlan(
+                date=plan_date.isoformat(),
+                task_count=len(day_tasks),
+                urgent_count=sum(task.severity == TaskSeverity.URGENT for task in day_tasks),
+                watch_count=sum(task.severity == TaskSeverity.WATCH for task in day_tasks),
+                top_task=day_tasks[0].title if day_tasks else None,
+            )
             for plan_date, day_tasks in week.items()
         ],
     )
