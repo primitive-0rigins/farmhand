@@ -11,11 +11,13 @@ from app.db import get_session, init_db
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
-from app.farms import FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
+from app.farms import add_asset, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
-from app.orm import Farm, User
+from app.orm import Farm, FarmAssetRecord, User
 from app.schemas import (
     FarmCreate,
+    FarmAssetCreate,
+    FarmAssetResponse,
     FarmResponse,
     MagicLinkRequest,
     MagicLinkResponse,
@@ -206,7 +208,12 @@ def _farm_response(farm: Farm) -> FarmResponse:
         state=farm.state,
         planting_zone=farm.planting_zone,
         crops=list(farm.crops),
+        assets=[_asset_response(asset) for asset in farm.assets],
     )
+
+
+def _asset_response(asset: FarmAssetRecord) -> FarmAssetResponse:
+    return FarmAssetResponse(id=asset.id, name=asset.name, kind=asset.kind)
 
 
 @app.post("/farms", response_model=FarmResponse, status_code=201)
@@ -246,6 +253,20 @@ def get_farm_route(
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
     return _farm_response(farm)
+
+
+@app.post("/farms/{farm_id}/assets", response_model=FarmAssetResponse, status_code=201)
+def add_farm_asset_route(
+    farm_id: int,
+    body: FarmAssetCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmAssetResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _asset_response(add_asset(session, farm, name=body.name, kind=body.kind))
 
 
 @app.get("/farms/{farm_id}/today", response_model=TodayResponse)

@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.models import FarmProfile
-from app.orm import Farm, User
+from app.domain.models import FarmAsset, FarmProfile
+from app.orm import Farm, FarmAssetRecord, User
 
 
 class FarmNotFound(Exception):
@@ -57,11 +57,18 @@ def get_owned_farm(session: Session, user: User, farm_id: int) -> Farm:
     return farm
 
 
+def add_asset(session: Session, farm: Farm, *, name: str, kind: str) -> FarmAssetRecord:
+    asset = FarmAssetRecord(farm_id=farm.id, name=name, kind=kind)
+    session.add(asset)
+    session.commit()
+    session.refresh(asset)
+    return asset
+
+
 def farm_profile(farm: Farm) -> FarmProfile:
     """Map the stored farm onto the domain type the rules operate on.
 
-    Assets are not persisted yet, so asset-gated rules stay quiet until a
-    farm records equipment.
+    Asset-backed rules use the farm's recorded equipment.
     """
     return FarmProfile(
         name=farm.name,
@@ -69,4 +76,5 @@ def farm_profile(farm: Farm) -> FarmProfile:
         state=farm.state,
         planting_zone=farm.planting_zone,
         crops=list(farm.crops),
+        assets=[FarmAsset(name=asset.name, kind=asset.kind) for asset in farm.assets],
     )

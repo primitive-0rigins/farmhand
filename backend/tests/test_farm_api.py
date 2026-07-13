@@ -57,6 +57,47 @@ def test_farmer_can_create_list_and_plan_for_their_farm(db) -> None:
     )
 
 
+def test_recorded_assets_change_the_farm_plan(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={
+                "name": "South Field",
+                "city": "Greenville",
+                "state": "SC",
+                "planting_zone": "8b",
+                "crops": [],
+            },
+        ).json()
+        tractor = client.post(
+            f"/farms/{farm['id']}/assets",
+            headers=headers,
+            json={"name": "Kubota", "kind": "tractor"},
+        )
+        irrigation = client.post(
+            f"/farms/{farm['id']}/assets",
+            headers=headers,
+            json={"name": "Drip irrigation", "kind": "irrigation"},
+        )
+        today = client.get(f"/farms/{farm['id']}/today", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert tractor.status_code == 201
+    assert irrigation.status_code == 201
+    assert any(
+        task["source_rule"] == "heat_irrigation_playbook" for task in today.json()["tasks"]
+    )
+    weather_task = next(
+        task for task in today.json()["tasks"] if task["source_rule"] == "bad_weather_playbook"
+    )
+    assert "Make sure tractor and implements are covered or parked safely." in weather_task["steps"]
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
@@ -120,4 +161,5 @@ def test_farm_creation_rejects_blank_fields_and_normalizes_crops(db) -> None:
         "state": "SC",
         "planting_zone": "8b",
         "crops": ["tomato", "pepper"],
+        "assets": [],
     }

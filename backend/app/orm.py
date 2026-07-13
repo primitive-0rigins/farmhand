@@ -55,3 +55,17 @@ class Farm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="farms")
+    assets: Mapped[list["FarmAssetRecord"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
+
+
+class FarmAssetRecord(Base):
+    __tablename__ = "farm_assets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(60))
+
+    farm: Mapped[Farm] = relationship(back_populates="assets")
