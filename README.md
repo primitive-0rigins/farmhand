@@ -28,6 +28,7 @@ cd farmhand
 cd backend
 python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
+.venv/bin/alembic upgrade head
 .venv/bin/python -m pytest
 
 cd ../frontend
