@@ -12,7 +12,7 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
-from app.farms import add_asset, add_growing_space, add_planting, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses
+from app.farms import add_asset, add_growing_space, add_planting, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
 from app.geocode import CompositeGeocoder, Coordinates, Geocoder, OpenMeteoGeocoder, StaticGeocoder, ZippopotamGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
@@ -69,7 +69,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -353,6 +353,24 @@ def add_farm_asset_route(
     return _asset_response(add_asset(session, farm, name=body.name, kind=body.kind))
 
 
+@app.put("/farms/{farm_id}/assets/{asset_id}", response_model=FarmAssetResponse)
+def update_farm_asset_route(
+    farm_id: int,
+    asset_id: int,
+    body: FarmAssetCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmAssetResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    asset = update_asset(session, farm, asset_id, name=body.name, kind=body.kind)
+    if asset is None:
+        raise HTTPException(status_code=404, detail="asset not found")
+    return _asset_response(asset)
+
+
 @app.delete("/farms/{farm_id}/assets/{asset_id}", status_code=204)
 def delete_farm_asset_route(farm_id: int, asset_id: int, user: User = Depends(current_user), session: Session = Depends(get_session)) -> None:
     try:
@@ -375,6 +393,24 @@ def add_growing_space_route(
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
     return _space_response(add_growing_space(session, farm, name=body.name, kind=body.kind))
+
+
+@app.put("/farms/{farm_id}/spaces/{space_id}", response_model=GrowingSpaceResponse)
+def update_growing_space_route(
+    farm_id: int,
+    space_id: int,
+    body: GrowingSpaceCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> GrowingSpaceResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    space = update_growing_space(session, farm, space_id, name=body.name, kind=body.kind)
+    if space is None:
+        raise HTTPException(status_code=404, detail="growing space not found")
+    return _space_response(space)
 
 
 @app.delete("/farms/{farm_id}/spaces/{space_id}", status_code=204)
@@ -407,6 +443,31 @@ def add_planting_route(
             succession_interval_days=body.succession_interval_days,
         )
     )
+
+
+@app.put("/farms/{farm_id}/plantings/{planting_id}", response_model=CropPlantingResponse)
+def update_planting_route(
+    farm_id: int,
+    planting_id: int,
+    body: CropPlantingCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> CropPlantingResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    planting = update_planting(
+        session,
+        farm,
+        planting_id,
+        crop=body.crop,
+        planted_on=body.planted_on,
+        succession_interval_days=body.succession_interval_days,
+    )
+    if planting is None:
+        raise HTTPException(status_code=404, detail="planting not found")
+    return _planting_response(planting)
 
 
 @app.delete("/farms/{farm_id}/plantings/{planting_id}", status_code=204)

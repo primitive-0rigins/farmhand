@@ -228,6 +228,34 @@ def test_farmer_can_remove_their_setup_records(db) -> None:
     assert stored["plantings"] == []
 
 
+def test_farmer_can_correct_their_setup_records(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        asset = client.post(f"/farms/{farm['id']}/assets", headers=headers, json={"name": "Drip", "kind": "irrigation"}).json()
+        space = client.post(f"/farms/{farm['id']}/spaces", headers=headers, json={"name": "North field", "kind": "field"}).json()
+        planting = client.post(f"/farms/{farm['id']}/plantings", headers=headers, json={"crop": "lettuce", "planted_on": "2026-04-01"}).json()
+        updated = [
+            client.put(f"/farms/{farm['id']}/assets/{asset['id']}", headers=headers, json={"name": "West drip", "kind": " Irrigation "}),
+            client.put(f"/farms/{farm['id']}/spaces/{space['id']}", headers=headers, json={"name": "North tunnel", "kind": "high_tunnel"}),
+            client.put(f"/farms/{farm['id']}/plantings/{planting['id']}", headers=headers, json={"crop": " Lettuce ", "planted_on": "2026-04-05", "succession_interval_days": 14}),
+        ]
+        stored = client.get(f"/farms/{farm['id']}", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert [response.status_code for response in updated] == [200, 200, 200]
+    assert stored["assets"] == [{"id": asset["id"], "name": "West drip", "kind": "irrigation"}]
+    assert stored["spaces"] == [{"id": space["id"], "name": "North tunnel", "kind": "high_tunnel"}]
+    assert stored["plantings"] == [{"id": planting["id"], "crop": "lettuce", "planted_on": "2026-04-05", "succession_interval_days": 14}]
+
+
 def test_farmer_can_export_their_farm_data(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:

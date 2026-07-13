@@ -42,3 +42,26 @@ test("farmer can sign in and create a first farm", async ({ page }) => {
   await form.getByRole("button", { name: "Save farm" }).click();
   await expect(page.getByText("Using your farm")).toBeVisible();
 });
+
+test("farmer can correct a saved planting", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("farmhand-session-token", "session-token");
+    localStorage.setItem("farmhand-farm-id", "7");
+  });
+  await page.route("**/farms/7/plantings/3", async (route) => {
+    expect(route.request().method()).toBe("PUT");
+    expect(route.request().postDataJSON()).toEqual({ crop: "lettuce", planted_on: "2026-04-05", succession_interval_days: 14 });
+    await route.fulfill({ json: { id: 3, crop: "lettuce", planted_on: "2026-04-05", succession_interval_days: 14 } });
+  });
+  await page.route("**/farms/7/today", (route) => route.fulfill({ json: { farm: { name: "South Field", city: "Greenville", state: "SC", planting_zone: "8b" }, today: "2026-06-26", forecast: { date: "2026-06-27", summary: "Storms tomorrow", thunderstorm_risk: true, high_wind_mph: 34, heat_index_f: 91 }, tasks: [], week: [] } }));
+  await page.route("**/farms/7", (route) => route.fulfill({ json: { playbooks: [], assets: [], spaces: [], plantings: [{ id: 3, crop: "lettuce", planted_on: "2026-04-01", succession_interval_days: null }] } }));
+  await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Manage setup" }).click();
+  await page.getByRole("button", { name: "Edit" }).click();
+  const setup = page.getByLabel("Farm setup");
+  await setup.getByLabel("Planted on").fill("2026-04-05");
+  await setup.getByLabel("Succession interval (days)").fill("14");
+  await setup.getByRole("button", { name: "Save" }).click();
+  await expect(setup.getByText("every 14 days")).toBeVisible();
+});

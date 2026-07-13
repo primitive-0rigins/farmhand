@@ -66,6 +66,19 @@ def add_asset(session: Session, farm: Farm, *, name: str, kind: str) -> FarmAsse
     return asset
 
 
+def update_asset(
+    session: Session, farm: Farm, asset_id: int, *, name: str, kind: str
+) -> FarmAssetRecord | None:
+    asset = session.get(FarmAssetRecord, asset_id)
+    if asset is None or asset.farm_id != farm.id:
+        return None
+    asset.name = name
+    asset.kind = kind
+    session.commit()
+    session.refresh(asset)
+    return asset
+
+
 def add_growing_space(session: Session, farm: Farm, *, name: str, kind: str) -> GrowingSpace:
     space = GrowingSpace(farm_id=farm.id, name=name, kind=kind)
     session.add(space)
@@ -74,9 +87,42 @@ def add_growing_space(session: Session, farm: Farm, *, name: str, kind: str) -> 
     return space
 
 
+def update_growing_space(
+    session: Session, farm: Farm, space_id: int, *, name: str, kind: str
+) -> GrowingSpace | None:
+    space = session.get(GrowingSpace, space_id)
+    if space is None or space.farm_id != farm.id:
+        return None
+    space.name = name
+    space.kind = kind
+    session.commit()
+    session.refresh(space)
+    return space
+
+
 def add_planting(session: Session, farm: Farm, *, crop: str, planted_on: date, succession_interval_days: int | None) -> CropPlanting:
     planting = CropPlanting(farm_id=farm.id, crop=crop, planted_on=planted_on, succession_interval_days=succession_interval_days)
     session.add(planting)
+    session.commit()
+    session.refresh(planting)
+    return planting
+
+
+def update_planting(
+    session: Session,
+    farm: Farm,
+    planting_id: int,
+    *,
+    crop: str,
+    planted_on: date,
+    succession_interval_days: int | None,
+) -> CropPlanting | None:
+    planting = session.get(CropPlanting, planting_id)
+    if planting is None or planting.farm_id != farm.id:
+        return None
+    planting.crop = crop
+    planting.planted_on = planted_on
+    planting.succession_interval_days = succession_interval_days
     session.commit()
     session.refresh(planting)
     return planting

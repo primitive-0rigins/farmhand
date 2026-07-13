@@ -72,6 +72,7 @@ type SavedPlaybook = {
 
 type SetupRecord = { id: number; name?: string; crop?: string; kind?: string; planted_on?: string; succession_interval_days?: number | null };
 type FarmDetails = { playbooks: SavedPlaybook[]; assets: SetupRecord[]; spaces: SetupRecord[]; plantings: SetupRecord[] };
+type SetupKind = "assets" | "spaces" | "plantings";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -132,6 +133,7 @@ function App() {
   const [editingPlaybook, setEditingPlaybook] = useState<SavedPlaybook | null>(null);
   const [farmDetails, setFarmDetails] = useState<FarmDetails | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [editingSetup, setEditingSetup] = useState<{ kind: SetupKind; record: SetupRecord } | null>(null);
 
   function clearSession(message: string) {
     localStorage.removeItem("farmhand-session-token");
@@ -329,6 +331,26 @@ function App() {
       return;
     }
     setFarmDetails((current) => current ? { ...current, [kind]: current[kind].filter((record) => record.id !== id) } : current);
+  }
+
+  async function saveSetupRecord() {
+    if (!sessionToken || !farmId || !editingSetup) return;
+    const { kind, record } = editingSetup;
+    const body = kind === "plantings"
+      ? { crop: record.crop, planted_on: record.planted_on, succession_interval_days: record.succession_interval_days ?? null }
+      : { name: record.name, kind: record.kind };
+    const response = await fetch(`${API_BASE}/farms/${farmId}/${kind}/${record.id}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      setError("Could not save this setup record.");
+      return;
+    }
+    const saved = (await response.json()) as SetupRecord;
+    setFarmDetails((current) => current ? { ...current, [kind]: current[kind].map((item) => item.id === saved.id ? saved : item) } : current);
+    setEditingSetup(null);
   }
 
   async function exportFarm() {
@@ -603,8 +625,22 @@ function App() {
             {(["assets", "spaces", "plantings"] as const).map((kind) => <div key={kind}>
               <strong>{kind === "assets" ? "Equipment" : kind === "spaces" ? "Growing spaces" : "Plantings"}</strong>
               {farmDetails[kind].length ? farmDetails[kind].map((record) => <article key={record.id}>
-                <span>{record.name ?? record.crop} {record.kind ? `(${record.kind})` : ""} {record.planted_on ?? ""} {record.succession_interval_days ? `every ${record.succession_interval_days} days` : ""}</span>
-                <button onClick={() => removeSetupRecord(kind, record.id)}>Remove</button>
+                {editingSetup?.kind === kind && editingSetup.record.id === record.id ? <>
+                  {kind === "plantings" ? <>
+                    <label>Crop<input value={editingSetup.record.crop ?? ""} onChange={(event) => setEditingSetup({ ...editingSetup, record: { ...editingSetup.record, crop: event.target.value } })} /></label>
+                    <label>Planted on<input type="date" value={editingSetup.record.planted_on ?? ""} onChange={(event) => setEditingSetup({ ...editingSetup, record: { ...editingSetup.record, planted_on: event.target.value } })} /></label>
+                    <label>Succession interval (days)<input type="number" min="1" value={editingSetup.record.succession_interval_days ?? ""} onChange={(event) => setEditingSetup({ ...editingSetup, record: { ...editingSetup.record, succession_interval_days: event.target.value ? Number(event.target.value) : null } })} /></label>
+                  </> : <>
+                    <label>Name<input value={editingSetup.record.name ?? ""} onChange={(event) => setEditingSetup({ ...editingSetup, record: { ...editingSetup.record, name: event.target.value } })} /></label>
+                    <label>Type<input value={editingSetup.record.kind ?? ""} onChange={(event) => setEditingSetup({ ...editingSetup, record: { ...editingSetup.record, kind: event.target.value } })} /></label>
+                  </>}
+                  <button onClick={saveSetupRecord}>Save</button>
+                  <button onClick={() => setEditingSetup(null)}>Cancel</button>
+                </> : <>
+                  <span>{record.name ?? record.crop} {record.kind ? `(${record.kind})` : ""} {record.planted_on ?? ""} {record.succession_interval_days ? `every ${record.succession_interval_days} days` : ""}</span>
+                  <button onClick={() => setEditingSetup({ kind, record })}>Edit</button>
+                  <button onClick={() => removeSetupRecord(kind, record.id)}>Remove</button>
+                </>}
               </article>) : <p>None recorded.</p>}
             </div>)}
           </section>
