@@ -146,6 +146,35 @@ def test_farmer_can_record_a_crop_planting(db) -> None:
     assert stored.json()["plantings"] == [created.json()]
 
 
+def test_saved_playbook_changes_the_farms_weather_task(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        saved = client.post(
+            f"/farms/{farm['id']}/playbooks",
+            headers=headers,
+            json={
+                "trigger": "bad_weather",
+                "title": "Storm checklist",
+                "steps": ["Latch the tunnel.", "Cover the tractor."],
+            },
+        )
+        today = client.get(f"/farms/{farm['id']}/today", headers=headers)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert saved.status_code == 201
+    task = next(task for task in today.json()["tasks"] if task["source_rule"] == "bad_weather_playbook")
+    assert task["title"] == "Storm checklist"
+    assert task["steps"] == ["Latch the tunnel.", "Cover the tractor."]
+
+
 def test_farmer_cannot_read_another_users_farm(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:
@@ -212,4 +241,5 @@ def test_farm_creation_rejects_blank_fields_and_normalizes_crops(db) -> None:
         "assets": [],
         "spaces": [],
         "plantings": [],
+        "playbooks": [],
     }

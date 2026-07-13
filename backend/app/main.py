@@ -9,17 +9,19 @@ from sqlalchemy.orm import Session
 from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
 from app.config import dev_auth_enabled, get_allowed_origins
 from app.db import get_session
-from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, TaskSeverity
+from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender
-from app.farms import add_asset, add_growing_space, add_planting, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms
+from app.farms import add_asset, add_growing_space, add_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook
 from app.geocode import Coordinates, Geocoder, StaticGeocoder
-from app.orm import CropPlanting, Farm, FarmAssetRecord, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
     FarmCreate,
     FarmAssetCreate,
     FarmAssetResponse,
     FarmResponse,
+    FarmPlaybookCreate,
+    FarmPlaybookResponse,
     CropPlantingCreate,
     CropPlantingResponse,
     FarmSummary,
@@ -155,7 +157,7 @@ def serialize_task(task: GeneratedTask) -> SerializedTask:
     }
 
 
-def _build_today(farm: FarmProfile) -> TodayResponse:
+def _build_today(farm: FarmProfile, playbooks: dict[str, Playbook] | None = None) -> TodayResponse:
     today_date = date(2026, 6, 26)
     # The farm's town drives the forecast: geocode it, then ask the weather
     # provider for that location. A real deployment stores the coordinates so
@@ -167,9 +169,11 @@ def _build_today(farm: FarmProfile) -> TodayResponse:
     forecast = forecasts[1]
     upcoming = [item for item in forecasts if item.forecast_date > today_date]
     tasks = generate_daily_tasks(
-        farm=farm, forecast=forecast, today=today_date, upcoming=upcoming
+        farm=farm, forecast=forecast, today=today_date, playbooks=playbooks, upcoming=upcoming
     )
-    week = generate_weekly_plan(farm=farm, forecasts=forecasts, start_date=today_date)
+    week = generate_weekly_plan(
+        farm=farm, forecasts=forecasts, start_date=today_date, playbooks=playbooks
+    )
 
     return TodayResponse(
         farm=FarmSummary(
@@ -229,6 +233,7 @@ def _farm_response(farm: Farm) -> FarmResponse:
         assets=[_asset_response(asset) for asset in farm.assets],
         spaces=[_space_response(space) for space in farm.spaces],
         plantings=[_planting_response(planting) for planting in farm.plantings],
+        playbooks=[_playbook_response(playbook) for playbook in farm.playbooks],
     )
 
 
@@ -243,6 +248,15 @@ def _space_response(space: GrowingSpace) -> GrowingSpaceResponse:
 def _planting_response(planting: CropPlanting) -> CropPlantingResponse:
     return CropPlantingResponse(
         id=planting.id, crop=planting.crop, planted_on=planting.planted_on
+    )
+
+
+def _playbook_response(playbook: FarmPlaybook) -> FarmPlaybookResponse:
+    return FarmPlaybookResponse(
+        id=playbook.id,
+        trigger=playbook.trigger,
+        title=playbook.title,
+        steps=list(playbook.steps),
     )
 
 
@@ -327,6 +341,22 @@ def add_planting_route(
     return _planting_response(add_planting(session, farm, crop=body.crop, planted_on=body.planted_on))
 
 
+@app.post("/farms/{farm_id}/playbooks", response_model=FarmPlaybookResponse, status_code=201)
+def save_farm_playbook_route(
+    farm_id: int,
+    body: FarmPlaybookCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> FarmPlaybookResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _playbook_response(
+        save_playbook(session, farm, trigger=body.trigger, title=body.title, steps=body.steps)
+    )
+
+
 @app.get("/farms/{farm_id}/today", response_model=TodayResponse)
 def farm_today_route(
     farm_id: int,
@@ -337,4 +367,4 @@ def farm_today_route(
         farm = get_owned_farm(session, user, farm_id)
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
-    return _build_today(farm_profile(farm))
+    return _build_today(farm_profile(farm), farm_playbooks(farm))

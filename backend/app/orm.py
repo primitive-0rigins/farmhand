@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, JSON, String
+from sqlalchemy import Date, DateTime, ForeignKey, JSON, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -64,6 +64,9 @@ class Farm(Base):
     plantings: Mapped[list["CropPlanting"]] = relationship(
         back_populates="farm", cascade="all, delete-orphan"
     )
+    playbooks: Mapped[list["FarmPlaybook"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
 
 
 class FarmAssetRecord(Base):
@@ -97,3 +100,16 @@ class CropPlanting(Base):
     planted_on: Mapped[date] = mapped_column(Date)
 
     farm: Mapped[Farm] = relationship(back_populates="plantings")
+
+
+class FarmPlaybook(Base):
+    __tablename__ = "farm_playbooks"
+    __table_args__ = (UniqueConstraint("farm_id", "trigger"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    trigger: Mapped[str] = mapped_column(String(60))
+    title: Mapped[str] = mapped_column(String(200))
+    steps: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+    farm: Mapped[Farm] = relationship(back_populates="playbooks")

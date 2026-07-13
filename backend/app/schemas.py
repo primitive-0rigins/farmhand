@@ -104,6 +104,7 @@ class FarmResponse(BaseModel):
     assets: list["FarmAssetResponse"]
     spaces: list["GrowingSpaceResponse"]
     plantings: list["CropPlantingResponse"]
+    playbooks: list["FarmPlaybookResponse"]
 
 
 class FarmAssetCreate(BaseModel):
@@ -169,3 +170,32 @@ class CropPlantingResponse(BaseModel):
     id: int
     crop: str
     planted_on: date
+
+
+class FarmPlaybookCreate(BaseModel):
+    trigger: Literal["bad_weather", "frost", "heat_irrigation"]
+    title: str
+    steps: list[str]
+
+    @field_validator("title")
+    @classmethod
+    def required_title(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("steps")
+    @classmethod
+    def normalized_steps(cls, values: list[str]) -> list[str]:
+        steps = [step.strip() for step in values if step.strip()]
+        if not steps:
+            raise ValueError("at least one step is required")
+        return steps
+
+
+class FarmPlaybookResponse(BaseModel):
+    id: int
+    trigger: str
+    title: str
+    steps: list[str]

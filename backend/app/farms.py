@@ -6,8 +6,8 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.domain.models import FarmAsset, FarmProfile
-from app.orm import CropPlanting, Farm, FarmAssetRecord, GrowingSpace, User
+from app.domain.models import FarmAsset, FarmProfile, Playbook
+from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
 
 
 class FarmNotFound(Exception):
@@ -80,6 +80,34 @@ def add_planting(session: Session, farm: Farm, *, crop: str, planted_on: date) -
     session.commit()
     session.refresh(planting)
     return planting
+
+
+def save_playbook(
+    session: Session, farm: Farm, *, trigger: str, title: str, steps: Sequence[str]
+) -> FarmPlaybook:
+    playbook = session.scalar(
+        select(FarmPlaybook).where(
+            FarmPlaybook.farm_id == farm.id, FarmPlaybook.trigger == trigger
+        )
+    )
+    if playbook is None:
+        playbook = FarmPlaybook(farm_id=farm.id, trigger=trigger, title=title, steps=list(steps))
+        session.add(playbook)
+    else:
+        playbook.title = title
+        playbook.steps = list(steps)
+    session.commit()
+    session.refresh(playbook)
+    return playbook
+
+
+def farm_playbooks(farm: Farm) -> dict[str, Playbook]:
+    return {
+        playbook.trigger: Playbook(
+            trigger=playbook.trigger, title=playbook.title, steps=list(playbook.steps)
+        )
+        for playbook in farm.playbooks
+    }
 
 
 def farm_profile(farm: Farm) -> FarmProfile:
