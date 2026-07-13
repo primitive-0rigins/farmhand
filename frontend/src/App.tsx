@@ -70,6 +70,9 @@ type SavedPlaybook = {
   steps: string[];
 };
 
+type SetupRecord = { id: number; name?: string; crop?: string; kind?: string; planted_on?: string };
+type FarmDetails = { playbooks: SavedPlaybook[]; assets: SetupRecord[]; spaces: SetupRecord[]; plantings: SetupRecord[] };
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 function formatDate(value: string) {
@@ -126,6 +129,8 @@ function App() {
   const [playbooks, setPlaybooks] = useState<SavedPlaybook[]>([]);
   const [showPlaybooks, setShowPlaybooks] = useState(false);
   const [editingPlaybook, setEditingPlaybook] = useState<SavedPlaybook | null>(null);
+  const [farmDetails, setFarmDetails] = useState<FarmDetails | null>(null);
+  const [showSetup, setShowSetup] = useState(false);
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -169,9 +174,9 @@ function App() {
     fetch(`${API_BASE}/farms/${farmId}`, { headers: { Authorization: `Bearer ${sessionToken}` } })
       .then((response) => {
         if (!response.ok) throw new Error("Could not load saved playbooks for this farm.");
-        return response.json() as Promise<{ playbooks: SavedPlaybook[] }>;
+        return response.json() as Promise<FarmDetails>;
       })
-      .then((farm) => setPlaybooks(farm.playbooks))
+      .then((farm) => { setPlaybooks(farm.playbooks); setFarmDetails(farm); })
       .catch((caught: Error) => setError(caught.message));
   }, [farmId, sessionToken]);
 
@@ -274,7 +279,21 @@ function App() {
     setSessionToken(null);
     setFarmId(null);
     setFarms([]);
+    setFarmDetails(null);
     setAuthMessage("Signed out. Showing the public demo.");
+  }
+
+  async function removeSetupRecord(kind: "assets" | "spaces" | "plantings", id: number) {
+    if (!sessionToken || !farmId) return;
+    const response = await fetch(`${API_BASE}/farms/${farmId}/${kind}/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    });
+    if (!response.ok) {
+      setError("Could not remove this setup record.");
+      return;
+    }
+    setFarmDetails((current) => current ? { ...current, [kind]: current[kind].filter((record) => record.id !== id) } : current);
   }
 
   async function savePlaybookFromLibrary() {
@@ -484,6 +503,7 @@ function App() {
               </select>
               {farms.length === 0 ? <button onClick={() => setShowFarmForm(true)}>Create your first farm</button> : null}
               {farmId ? <button onClick={() => setShowPlantingForm(true)}>Record planting</button> : null}
+              {farmId ? <button onClick={() => setShowSetup((current) => !current)}>Manage setup</button> : null}
               <button onClick={signOut}>Sign out</button>
             </>
           ) : (
@@ -520,6 +540,19 @@ function App() {
             <label>Crop<input value={plantingCrop} onChange={(event) => setPlantingCrop(event.target.value)} placeholder="tomato" /></label>
             <label>Planted on<input type="date" value={plantingDate} onChange={(event) => setPlantingDate(event.target.value)} /></label>
             <button onClick={recordPlanting}>Save planting</button>
+          </section>
+        ) : null}
+
+        {showSetup && farmDetails ? (
+          <section className="playbooks-panel" aria-label="Farm setup">
+            <h2>Farm setup</h2>
+            {(["assets", "spaces", "plantings"] as const).map((kind) => <div key={kind}>
+              <strong>{kind === "assets" ? "Equipment" : kind === "spaces" ? "Growing spaces" : "Plantings"}</strong>
+              {farmDetails[kind].length ? farmDetails[kind].map((record) => <article key={record.id}>
+                <span>{record.name ?? record.crop} {record.kind ? `(${record.kind})` : ""} {record.planted_on ?? ""}</span>
+                <button onClick={() => removeSetupRecord(kind, record.id)}>Remove</button>
+              </article>) : <p>None recorded.</p>}
+            </div>)}
           </section>
         ) : null}
 
