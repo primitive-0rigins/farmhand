@@ -107,3 +107,20 @@ test("farmer can save a manual task to their farm", async ({ page }) => {
   await page.getByRole("button", { name: "Save task" }).click();
   await expect(page.getByText("Check row cover")).toBeVisible();
 });
+
+test("farmer can remove a saved manual task", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("farmhand-session-token", "session-token");
+    localStorage.setItem("farmhand-farm-id", "7");
+  });
+  await page.route("**/farms/7/manual-tasks/8", async (route) => {
+    expect(route.request().method()).toBe("DELETE");
+    await route.fulfill({ status: 204 });
+  });
+  await page.route("**/farms/7/today", (route) => route.fulfill({ json: { farm: { name: "South Field", city: "Greenville", state: "SC", planting_zone: "8b" }, today: "2026-06-26", forecast: { date: "2026-06-27", summary: "Storms tomorrow", thunderstorm_risk: true, high_wind_mph: 34, heat_index_f: 91 }, tasks: [{ id: "manual-8", title: "Check row cover", due_date: "2026-06-26", severity: "info", reason: "Manual work.", steps: [], source_rule: null, status: "open" }], week: [] } }));
+  await page.route("**/farms/7", (route) => route.fulfill({ json: { playbooks: [], assets: [], spaces: [], plantings: [] } }));
+  await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Remove" }).click();
+  await expect(page.getByText("Today is clear.")).toBeVisible();
+});

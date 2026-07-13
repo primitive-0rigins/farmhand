@@ -12,7 +12,7 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
-from app.farms import add_asset, add_growing_space, add_planting, add_manual_task, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
+from app.farms import add_asset, add_growing_space, add_planting, add_manual_task, delete_asset, delete_growing_space, delete_manual_task, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
 from app.geocode import CompositeGeocoder, Coordinates, Geocoder, OpenMeteoGeocoder, StaticGeocoder, ZippopotamGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmManualTask, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
@@ -536,6 +536,21 @@ def add_manual_task_route(
     return _manual_task_response(
         add_manual_task(session, farm, title=body.title, reason=body.reason, due_date=body.due_date)
     )
+
+
+@app.delete("/farms/{farm_id}/manual-tasks/{task_id}", status_code=204)
+def delete_manual_task_route(
+    farm_id: int,
+    task_id: int,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> None:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    if not delete_manual_task(session, farm, task_id):
+        raise HTTPException(status_code=404, detail="manual task not found")
 
 
 @app.post("/farms/{farm_id}/tasks/{task_id}/status", status_code=204)

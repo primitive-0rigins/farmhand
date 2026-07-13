@@ -229,6 +229,31 @@ def test_manual_task_persists_in_a_farms_today_feed(db) -> None:
     )
 
 
+def test_farmer_can_remove_a_manual_task(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        today = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+        task = client.post(
+            f"/farms/{farm['id']}/manual-tasks",
+            headers=headers,
+            json={"title": "Check row cover", "reason": "Wind is expected.", "due_date": today["today"]},
+        ).json()
+        deleted = client.delete(f"/farms/{farm['id']}/manual-tasks/{task['id']}", headers=headers)
+        refreshed = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert deleted.status_code == 204
+    assert not any(item["id"] == f"manual-{task['id']}" for item in refreshed["tasks"])
+
+
 def test_farmer_can_remove_their_setup_records(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:

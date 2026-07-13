@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Pencil,
   Sprout,
+  Trash2,
 } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
@@ -469,6 +470,23 @@ function App() {
     }
   }
 
+  async function removeManualTask(task: TodayTask) {
+    if (sessionToken && farmId) {
+      const taskId = task.id.replace("manual-", "");
+      const response = await fetch(`${API_BASE}/farms/${farmId}/manual-tasks/${taskId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (!response.ok) {
+        setError("Could not remove this task.");
+        return;
+      }
+      setToday((current) => current ? { ...current, tasks: current.tasks.filter((item) => item.id !== task.id) } : current);
+      return;
+    }
+    setManualTasks((current) => current.filter((item) => item.id !== task.id));
+  }
+
   function startEdit(task: TodayTask) {
     setEditingTaskId(task.id);
     setDraftTitle(task.title);
@@ -867,6 +885,12 @@ function App() {
                                 <Pencil size={16} />
                                 Edit
                               </button>
+                              {task.id.startsWith("manual-") ? (
+                                <button onClick={() => removeManualTask(task)}>
+                                  <Trash2 size={16} />
+                                  Remove
+                                </button>
+                              ) : null}
                               {task.steps.length > 0 ? (
                                 <button onClick={() => toggleSet(setOpenReasons, task.id)}>
                                   <ChevronDown size={16} />

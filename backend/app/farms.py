@@ -186,6 +186,15 @@ def add_manual_task(
     return task
 
 
+def delete_manual_task(session: Session, farm: Farm, task_id: int) -> bool:
+    task = session.get(FarmManualTask, task_id)
+    if task is None or task.farm_id != farm.id:
+        return False
+    session.delete(task)
+    session.commit()
+    return True
+
+
 def delete_asset(session: Session, farm: Farm, asset_id: int) -> bool:
     asset = session.get(FarmAssetRecord, asset_id)
     if asset is None or asset.farm_id != farm.id:
