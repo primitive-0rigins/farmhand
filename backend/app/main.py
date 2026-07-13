@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-from datetime import date
 from typing import Literal, TypedDict, cast
 
 from fastapi import Depends, FastAPI, Header, HTTPException
@@ -7,13 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.auth import AuthError, logout, request_magic_link, resolve_user, verify_magic_link
-from app.config import dev_auth_enabled, get_allowed_origins, smtp_settings
+from app.config import dev_auth_enabled, get_allowed_origins, smtp_settings, weather_provider_name
 from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
 from app.farms import add_asset, add_growing_space, add_planting, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses
-from app.geocode import Coordinates, Geocoder, StaticGeocoder
+from app.geocode import CompositeGeocoder, Coordinates, Geocoder, OpenMeteoGeocoder, StaticGeocoder, ZippopotamGeocoder
 from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
     FarmCreate,
@@ -38,7 +37,7 @@ from app.schemas import (
     VerifyRequest,
     WeekDayPlan,
 )
-from app.weather import DemoWeatherProvider, WeatherProvider
+from app.weather import DemoWeatherProvider, NWSWeatherProvider, WeatherProvider
 
 # Swap ConsoleEmailSender() for a real SMTP/transactional sender in production.
 smtp = smtp_settings()
@@ -52,10 +51,12 @@ DEMO_LONGITUDE = -82.40
 #   CompositeGeocoder([ZippopotamGeocoder(), OpenMeteoGeocoder()])
 # plus NWSWeatherProvider(). The farm's location then drives a real forecast,
 # still with no farmer sign-in.
-geocoder: Geocoder = StaticGeocoder(
-    {"Greenville, SC": Coordinates(DEMO_LATITUDE, DEMO_LONGITUDE)}
-)
-weather_provider: WeatherProvider = DemoWeatherProvider()
+if weather_provider_name() == "nws":
+    geocoder: Geocoder = CompositeGeocoder([ZippopotamGeocoder(), OpenMeteoGeocoder()])
+    weather_provider: WeatherProvider = NWSWeatherProvider()
+else:
+    geocoder = StaticGeocoder({"Greenville, SC": Coordinates(DEMO_LATITUDE, DEMO_LONGITUDE)})
+    weather_provider = DemoWeatherProvider()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -164,7 +165,6 @@ def _build_today(
     playbooks: dict[str, Playbook] | None = None,
     statuses: dict[str, str] | None = None,
 ) -> TodayResponse:
-    today_date = date(2026, 6, 26)
     # The farm's town drives the forecast: geocode it, then ask the weather
     # provider for that location. A real deployment stores the coordinates so
     # they are not looked up on every request.
@@ -172,6 +172,7 @@ def _build_today(
         DEMO_LATITUDE, DEMO_LONGITUDE
     )
     forecasts = weather_provider.daily_forecasts(location.latitude, location.longitude)
+    today_date = forecasts[0].forecast_date
     forecast = forecasts[1]
     upcoming = [item for item in forecasts if item.forecast_date > today_date]
     tasks = generate_daily_tasks(

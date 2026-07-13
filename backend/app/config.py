@@ -47,3 +47,7 @@ def smtp_settings() -> tuple[str, int, str, str | None, str | None, str] | None:
         os.getenv("FARMHAND_SMTP_PASSWORD"),
         app_url,
     )
+
+
+def weather_provider_name() -> str:
+    return os.getenv("FARMHAND_WEATHER_PROVIDER", "demo").lower()
