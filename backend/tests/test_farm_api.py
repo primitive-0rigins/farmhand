@@ -80,3 +80,44 @@ def test_farmer_cannot_read_another_users_farm(db) -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 404
+
+
+def test_farm_creation_rejects_blank_fields_and_normalizes_crops(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        invalid = client.post(
+            "/farms",
+            headers=headers,
+            json={
+                "name": " ",
+                "city": "Greenville",
+                "state": "SC",
+                "planting_zone": "8b",
+                "crops": [],
+            },
+        )
+        created = client.post(
+            "/farms",
+            headers=headers,
+            json={
+                "name": "  South Field  ",
+                "city": " Greenville ",
+                "state": " SC ",
+                "planting_zone": " 8b ",
+                "crops": [" Tomato ", "tomato", "PEPPER"],
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert invalid.status_code == 422
+    assert created.json() == {
+        "id": 1,
+        "name": "South Field",
+        "city": "Greenville",
+        "state": "SC",
+        "planting_zone": "8b",
+        "crops": ["tomato", "pepper"],
+    }

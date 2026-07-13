@@ -27,7 +27,7 @@ cd farmhand
 
 cd backend
 python3 -m venv .venv
-.venv/bin/python -m pip install fastapi "uvicorn[standard]" pydantic sqlalchemy "psycopg[binary]" pytest
+.venv/bin/python -m pip install -e '.[dev]'
 .venv/bin/python -m pytest
 
 cd ../frontend

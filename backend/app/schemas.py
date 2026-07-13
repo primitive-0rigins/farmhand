@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class FarmSummary(BaseModel):
@@ -72,7 +72,23 @@ class FarmCreate(BaseModel):
     city: str
     state: str
     planting_zone: str
-    crops: list[str] = []
+    crops: list[str] = Field(default_factory=list)
+
+    @field_validator("name", "city", "state", "planting_zone")
+    @classmethod
+    def required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+    @field_validator("crops")
+    @classmethod
+    def normalized_crops(cls, values: list[str]) -> list[str]:
+        crops = [crop.strip().lower() for crop in values]
+        if any(not crop for crop in crops):
+            raise ValueError("crop names must not be blank")
+        return list(dict.fromkeys(crops))
 
 
 class FarmResponse(BaseModel):
