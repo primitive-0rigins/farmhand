@@ -189,6 +189,37 @@ nav button:disabled:hover {
   padding: 8px 9px;
 }
 
+.playbooks-panel {
+  background: white;
+  border: 1px solid #ddd8ca;
+  border-radius: 8px;
+  margin: -8px 0 20px;
+  padding: 16px;
+}
+
+.playbooks-panel h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+.playbooks-panel article {
+  border-top: 1px solid #e3ddcf;
+  display: grid;
+  gap: 5px;
+  padding: 12px 0;
+}
+
+.playbooks-panel article span,
+.playbooks-panel p {
+  color: #5f6b63;
+  font-size: 14px;
+}
+
+.playbooks-panel ol {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+
 .farm-form button {
   background: #2f6b45;
   border: 0;

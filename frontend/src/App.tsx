@@ -62,6 +62,13 @@ type Farm = {
   name: string;
 };
 
+type SavedPlaybook = {
+  id: number;
+  trigger: string;
+  title: string;
+  steps: string[];
+};
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 function formatDate(value: string) {
@@ -115,6 +122,8 @@ function App() {
   const [showPlantingForm, setShowPlantingForm] = useState(false);
   const [plantingCrop, setPlantingCrop] = useState("");
   const [plantingDate, setPlantingDate] = useState("");
+  const [playbooks, setPlaybooks] = useState<SavedPlaybook[]>([]);
+  const [showPlaybooks, setShowPlaybooks] = useState(false);
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [doneTasks, setDoneTasks] = useState<Set<string>>(new Set());
@@ -142,6 +151,16 @@ function App() {
       })
       .then(setToday)
       .catch((caught: Error) => setError(caught.message));
+  }, [farmId, sessionToken]);
+
+  useEffect(() => {
+    if (!sessionToken || !farmId) {
+      setPlaybooks([]);
+      return;
+    }
+    fetch(`${API_BASE}/farms/${farmId}`, { headers: { Authorization: `Bearer ${sessionToken}` } })
+      .then((response) => response.json() as Promise<{ playbooks: SavedPlaybook[] }>)
+      .then((farm) => setPlaybooks(farm.playbooks));
   }, [farmId, sessionToken]);
 
   useEffect(() => {
@@ -318,6 +337,13 @@ function App() {
         steps,
       },
     }));
+    const trigger = task.source_rule;
+    if (trigger) {
+      setPlaybooks((current) => [
+        ...current.filter((playbook) => playbook.trigger !== trigger),
+        { id: 0, trigger, title, steps },
+      ]);
+    }
     setEditingTaskId(null);
   }
 
@@ -370,7 +396,7 @@ function App() {
           <button className="active">Today</button>
           <button disabled>Calendar</button>
           <button disabled>Crops</button>
-          <button disabled>Playbooks</button>
+          <button onClick={() => setShowPlaybooks((current) => !current)}>Playbooks</button>
           <button disabled>Signals</button>
         </nav>
       </aside>
@@ -440,6 +466,19 @@ function App() {
             <label>Crop<input value={plantingCrop} onChange={(event) => setPlantingCrop(event.target.value)} placeholder="tomato" /></label>
             <label>Planted on<input type="date" value={plantingDate} onChange={(event) => setPlantingDate(event.target.value)} /></label>
             <button onClick={recordPlanting}>Save planting</button>
+          </section>
+        ) : null}
+
+        {showPlaybooks ? (
+          <section className="playbooks-panel" aria-label="Saved playbooks">
+            <h2>Saved playbooks</h2>
+            {playbooks.length > 0 ? playbooks.map((playbook) => (
+              <article key={playbook.trigger}>
+                <strong>{playbook.title}</strong>
+                <span>{ruleLabel(playbook.trigger)}</span>
+                <ol>{playbook.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+              </article>
+            )) : <p>Save edits from a generated weather task to build this farm's reusable playbooks.</p>}
           </section>
         ) : null}
 
