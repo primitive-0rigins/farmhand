@@ -513,7 +513,7 @@ function App() {
     setEditingTaskId(null);
   }
 
-  function saveManualTask() {
+  async function saveManualTask() {
     if (!today) return;
 
     const title = manualTitle.trim();
@@ -521,19 +521,30 @@ function App() {
 
     if (!title) return;
 
-    setManualTasks((current) => [
-      ...current,
-      {
-        id: `manual-${Date.now()}`,
-        title,
-        due_date: today.today,
-        severity: "info",
-        reason,
-        steps: [],
-        source_rule: null,
-        status: "open",
-      },
-    ]);
+    const task = {
+      title,
+      due_date: today.today,
+      severity: "info" as const,
+      reason,
+      steps: [],
+      source_rule: null,
+      status: "open" as const,
+    };
+    if (sessionToken && farmId) {
+      const response = await fetch(`${API_BASE}/farms/${farmId}/manual-tasks`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sessionToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ title, reason, due_date: today.today }),
+      });
+      if (!response.ok) {
+        setError("Could not save this task.");
+        return;
+      }
+      const saved = (await response.json()) as { id: number };
+      setToday((current) => current ? { ...current, tasks: [...current.tasks, { ...task, id: `manual-${saved.id}` }] } : current);
+    } else {
+      setManualTasks((current) => [...current, { ...task, id: `manual-${Date.now()}` }]);
+    }
     setManualTitle("");
     setManualReason("");
     setShowManualForm(false);

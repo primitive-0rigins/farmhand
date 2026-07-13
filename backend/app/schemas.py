@@ -182,6 +182,27 @@ class CropPlantingResponse(BaseModel):
     succession_interval_days: int | None
 
 
+class ManualTaskCreate(BaseModel):
+    title: str
+    reason: str
+    due_date: date
+
+    @field_validator("title", "reason")
+    @classmethod
+    def required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be blank")
+        return value
+
+
+class ManualTaskResponse(BaseModel):
+    id: int
+    title: str
+    reason: str
+    due_date: date
+
+
 class FarmPlaybookCreate(BaseModel):
     trigger: Literal["bad_weather", "frost", "heat_irrigation"]
     title: str

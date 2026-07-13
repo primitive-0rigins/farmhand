@@ -200,6 +200,35 @@ def test_task_status_persists_for_a_farm(db) -> None:
     assert next(task for task in refreshed["tasks"] if task["id"] == task_id)["status"] == "completed"
 
 
+def test_manual_task_persists_in_a_farms_today_feed(db) -> None:
+    app.dependency_overrides[get_session] = lambda: db
+    try:
+        client = TestClient(app)
+        headers = _authorization(db, "farmer@example.com")
+        farm = client.post(
+            "/farms",
+            headers=headers,
+            json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b"},
+        ).json()
+        today = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+        created = client.post(
+            f"/farms/{farm['id']}/manual-tasks",
+            headers=headers,
+            json={"title": "Check row cover", "reason": "Wind is expected.", "due_date": today["today"]},
+        )
+        refreshed = client.get(f"/farms/{farm['id']}/today", headers=headers).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert created.status_code == 201
+    assert created.json()["title"] == "Check row cover"
+    assert any(
+        task["id"] == f"manual-{created.json()['id']}"
+        and task["reason"] == "Wind is expected."
+        for task in refreshed["tasks"]
+    )
+
+
 def test_farmer_can_remove_their_setup_records(db) -> None:
     app.dependency_overrides[get_session] = lambda: db
     try:

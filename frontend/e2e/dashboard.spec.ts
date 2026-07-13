@@ -87,3 +87,23 @@ test("farmer can add equipment from farm setup", async ({ page }) => {
   await form.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("West drip (irrigation)")).toBeVisible();
 });
+
+test("farmer can save a manual task to their farm", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("farmhand-session-token", "session-token");
+    localStorage.setItem("farmhand-farm-id", "7");
+  });
+  await page.route("**/farms/7/manual-tasks", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postDataJSON()).toEqual({ title: "Check row cover", reason: "Created manually for today's work.", due_date: "2026-06-26" });
+    await route.fulfill({ json: { id: 8, title: "Check row cover", reason: "Created manually for today's work.", due_date: "2026-06-26" } });
+  });
+  await page.route("**/farms/7/today", (route) => route.fulfill({ json: { farm: { name: "South Field", city: "Greenville", state: "SC", planting_zone: "8b" }, today: "2026-06-26", forecast: { date: "2026-06-27", summary: "Storms tomorrow", thunderstorm_risk: true, high_wind_mph: 34, heat_index_f: 91 }, tasks: [], week: [] } }));
+  await page.route("**/farms/7", (route) => route.fulfill({ json: { playbooks: [], assets: [], spaces: [], plantings: [] } }));
+  await page.route("**/farms", (route) => route.fulfill({ json: [{ id: 7, name: "South Field" }] }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add task" }).click();
+  await page.getByLabel("Task name").fill("Check row cover");
+  await page.getByRole("button", { name: "Save task" }).click();
+  await expect(page.getByText("Check row cover")).toBeVisible();
+});

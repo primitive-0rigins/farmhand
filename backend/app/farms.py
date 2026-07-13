@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.models import CropPlanting as DomainCropPlanting, FarmAsset, FarmProfile, Playbook
-from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, FarmTaskState, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmManualTask, FarmPlaybook, FarmTaskState, GrowingSpace, User
 
 
 class FarmNotFound(Exception):
@@ -174,6 +174,16 @@ def save_task_status(session: Session, farm: Farm, *, task_id: str, status: str)
     else:
         state.status = status
     session.commit()
+
+
+def add_manual_task(
+    session: Session, farm: Farm, *, title: str, reason: str, due_date: date
+) -> FarmManualTask:
+    task = FarmManualTask(farm_id=farm.id, title=title, reason=reason, due_date=due_date)
+    session.add(task)
+    session.commit()
+    session.refresh(task)
+    return task
 
 
 def delete_asset(session: Session, farm: Farm, asset_id: int) -> bool:

@@ -12,9 +12,9 @@ from app.db import get_session
 from app.domain.models import FarmAsset, FarmProfile, GeneratedTask, Playbook, TaskSeverity
 from app.domain.rules import generate_daily_tasks, generate_weekly_plan
 from app.email import ConsoleEmailSender, EmailSender, SmtpEmailSender
-from app.farms import add_asset, add_growing_space, add_planting, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
+from app.farms import add_asset, add_growing_space, add_planting, add_manual_task, delete_asset, delete_growing_space, delete_planting, farm_playbooks, FarmNotFound, create_farm, farm_profile, get_owned_farm, list_farms, save_playbook, save_task_status, task_statuses, update_asset, update_growing_space, update_planting
 from app.geocode import CompositeGeocoder, Coordinates, Geocoder, OpenMeteoGeocoder, StaticGeocoder, ZippopotamGeocoder
-from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmPlaybook, GrowingSpace, User
+from app.orm import CropPlanting, Farm, FarmAssetRecord, FarmManualTask, FarmPlaybook, GrowingSpace, User
 from app.schemas import (
     FarmCreate,
     FarmAssetCreate,
@@ -30,6 +30,8 @@ from app.schemas import (
     GrowingSpaceResponse,
     MagicLinkRequest,
     MagicLinkResponse,
+    ManualTaskCreate,
+    ManualTaskResponse,
     SessionResponse,
     TodayResponse,
     TodayTask,
@@ -165,6 +167,7 @@ def _build_today(
     farm: FarmProfile,
     playbooks: dict[str, Playbook] | None = None,
     statuses: dict[str, str] | None = None,
+    manual_tasks: list[FarmManualTask] | None = None,
 ) -> TodayResponse:
     # The farm's town drives the forecast: geocode it, then ask the weather
     # provider for that location. A real deployment stores the coordinates so
@@ -183,6 +186,34 @@ def _build_today(
         farm=farm, forecasts=forecasts, start_date=today_date, playbooks=playbooks
     )
 
+    today_tasks = [
+        TodayTask(
+            **serialize_task(task),
+            status=cast(
+                Literal["open", "completed", "snoozed"],
+                (statuses or {}).get(task_id(task), "open"),
+            ),
+        )
+        for task in tasks
+    ]
+    today_tasks.extend(
+        TodayTask(
+            id=f"manual-{task.id}",
+            title=task.title,
+            due_date=task.due_date.isoformat(),
+            severity="info",
+            reason=task.reason,
+            steps=[],
+            source_rule=None,
+            status=cast(
+                Literal["open", "completed", "snoozed"],
+                (statuses or {}).get(f"manual-{task.id}", "open"),
+            ),
+        )
+        for task in manual_tasks or []
+        if task.due_date == today_date
+    )
+
     return TodayResponse(
         farm=FarmSummary(
             name=farm.name,
@@ -198,16 +229,7 @@ def _build_today(
             high_wind_mph=forecast.high_wind_mph,
             heat_index_f=forecast.heat_index_f,
         ),
-        tasks=[
-            TodayTask(
-                **serialize_task(task),
-                status=cast(
-                    Literal["open", "completed", "snoozed"],
-                    (statuses or {}).get(task_id(task), "open"),
-                ),
-            )
-            for task in tasks
-        ],
+        tasks=today_tasks,
         week=[
             WeekDayPlan(
                 date=plan_date.isoformat(),
@@ -267,6 +289,10 @@ def _planting_response(planting: CropPlanting) -> CropPlantingResponse:
         id=planting.id, crop=planting.crop, planted_on=planting.planted_on,
         succession_interval_days=planting.succession_interval_days,
     )
+
+
+def _manual_task_response(task: FarmManualTask) -> ManualTaskResponse:
+    return ManualTaskResponse(id=task.id, title=task.title, reason=task.reason, due_date=task.due_date)
 
 
 def _playbook_response(playbook: FarmPlaybook) -> FarmPlaybookResponse:
@@ -496,6 +522,22 @@ def save_farm_playbook_route(
     )
 
 
+@app.post("/farms/{farm_id}/manual-tasks", response_model=ManualTaskResponse, status_code=201)
+def add_manual_task_route(
+    farm_id: int,
+    body: ManualTaskCreate,
+    user: User = Depends(current_user),
+    session: Session = Depends(get_session),
+) -> ManualTaskResponse:
+    try:
+        farm = get_owned_farm(session, user, farm_id)
+    except FarmNotFound:
+        raise HTTPException(status_code=404, detail="farm not found")
+    return _manual_task_response(
+        add_manual_task(session, farm, title=body.title, reason=body.reason, due_date=body.due_date)
+    )
+
+
 @app.post("/farms/{farm_id}/tasks/{task_id}/status", status_code=204)
 def save_task_status_route(
     farm_id: int,
@@ -521,4 +563,6 @@ def farm_today_route(
         farm = get_owned_farm(session, user, farm_id)
     except FarmNotFound:
         raise HTTPException(status_code=404, detail="farm not found")
-    return _build_today(farm_profile(farm), farm_playbooks(farm), task_statuses(farm))
+    return _build_today(
+        farm_profile(farm), farm_playbooks(farm), task_statuses(farm), farm.manual_tasks
+    )

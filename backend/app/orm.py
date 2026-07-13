@@ -70,6 +70,9 @@ class Farm(Base):
     task_states: Mapped[list["FarmTaskState"]] = relationship(
         back_populates="farm", cascade="all, delete-orphan"
     )
+    manual_tasks: Mapped[list["FarmManualTask"]] = relationship(
+        back_populates="farm", cascade="all, delete-orphan"
+    )
 
 
 class FarmAssetRecord(Base):
@@ -129,3 +132,15 @@ class FarmTaskState(Base):
     status: Mapped[str] = mapped_column(String(20))
 
     farm: Mapped[Farm] = relationship(back_populates="task_states")
+
+
+class FarmManualTask(Base):
+    __tablename__ = "farm_manual_tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    farm_id: Mapped[int] = mapped_column(ForeignKey("farms.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    reason: Mapped[str] = mapped_column(String(500))
+    due_date: Mapped[date] = mapped_column(Date)
+
+    farm: Mapped[Farm] = relationship(back_populates="manual_tasks")
