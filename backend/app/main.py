@@ -360,6 +360,9 @@ def export_farm_route(
                 {"task_id": state.task_id, "status": state.status}
                 for state in farm.task_states
             ],
+            "manual_tasks": [
+                _manual_task_response(task).model_dump(mode="json") for task in farm.manual_tasks
+            ],
         },
         headers={"Content-Disposition": f'attachment; filename="farmhand-farm-{farm.id}.json"'},
     )

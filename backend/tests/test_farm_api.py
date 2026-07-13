@@ -320,6 +320,11 @@ def test_farmer_can_export_their_farm_data(db) -> None:
             headers=headers,
             json={"name": "South Field", "city": "Greenville", "state": "SC", "planting_zone": "8b", "crops": ["tomato"]},
         ).json()
+        task = client.post(
+            f"/farms/{farm['id']}/manual-tasks",
+            headers=headers,
+            json={"title": "Check row cover", "reason": "Wind is expected.", "due_date": "2026-06-26"},
+        ).json()
         response = client.get(f"/farms/{farm['id']}/export", headers=headers)
     finally:
         app.dependency_overrides.clear()
@@ -328,6 +333,7 @@ def test_farmer_can_export_their_farm_data(db) -> None:
     assert response.headers["content-disposition"] == f'attachment; filename="farmhand-farm-{farm["id"]}.json"'
     assert response.json()["farm"]["crops"] == ["tomato"]
     assert response.json()["task_states"] == []
+    assert response.json()["manual_tasks"] == [task]
 
 
 def test_farmer_cannot_read_another_users_farm(db) -> None:
