@@ -84,10 +84,13 @@ farmhand/
 
 ## Local Development
 
-Backend tests currently exercise demo API and domain logic and do not require Postgres.
+Backend tests do not require Postgres, but the running server needs its schema
+applied first. `FARMHAND_DATABASE_URL` defaults to a local SQLite file, so a
+bare checkout runs with no database to set up:
 
 ```bash
 cd backend
+.venv/bin/alembic upgrade head
 .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
