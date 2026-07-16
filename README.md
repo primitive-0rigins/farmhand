@@ -51,6 +51,11 @@ Example:
 - That edited playbook becomes their default bad-weather prep task going
   forward.
 
+That exact scenario is the live dashboard today — the storm forecast raises an
+urgent prep task, and every task states its reason in plain English:
+
+![Farmhand dashboard: storm forecast raising an urgent bad-weather prep task](docs/dashboard.png)
+
 ## Stack
 
 - Backend: Python, FastAPI
